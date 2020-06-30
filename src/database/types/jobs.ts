@@ -1,38 +1,33 @@
 import * as t from 'io-ts';
 import { ObjectId } from 'mongodb';
 
-export interface DispatchedJob {
+export interface BaseJob {
   _id: ObjectId;
   providerId: ObjectId;
   queryId: ObjectId;
-  jobState: 'dispatched';
+  jobState: string;
   dispatchTimestamp: Date;
+  countryCode: string,
+  regionCode: string,
+  ispName: string,
 }
 
-export interface AcceptedJob {
-  _id: ObjectId;
-  providerId: ObjectId;
-  queryId: ObjectId;
+export interface DispatchedJob extends BaseJob {
+  jobState: 'dispatched';
+}
+
+export interface AcceptedJob extends BaseJob {
   jobState: 'accepted';
-  dispatchTimestamp: Date;
   acceptTimestamp: Date;
 }
 
-export interface RejectedJob {
-  _id: ObjectId;
-  providerId: ObjectId;
-  queryId: ObjectId;
+export interface RejectedJob extends BaseJob {
   jobState: 'rejected';
-  dispatchTimestamp: Date;
   rejectTimestamp: Date;
 }
 
-export interface CanceledJob {
-  _id: ObjectId;
-  providerId: ObjectId;
-  queryId: ObjectId;
+export interface CanceledJob extends BaseJob {
   jobState: 'canceled';
-  dispatchTimestamp: Date;
   acceptTimestamp: Date;
   cancelTimestamp: Date;
 }
@@ -60,12 +55,8 @@ export const JobResult = t.union([JobResultSuccess, JobResultTimeout, JobResultE
 
 export type JobResult = t.TypeOf<typeof JobResult>;
 
-export interface CompletedJob {
-  _id: ObjectId;
-  providerId: ObjectId;
-  queryId: ObjectId;
+export interface CompletedJob extends BaseJob {
   jobState: 'completed';
-  dispatchTimestamp: Date;
   acceptTimestamp: Date;
   completeTimestamp: Date;
   result: JobResult;

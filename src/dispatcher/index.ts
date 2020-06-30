@@ -82,6 +82,9 @@ export default class Dispatcher {
               dispatchTimestamp: job.dispatchTimestamp,
               providerId: job.providerId,
               acceptTimestamp: job.acceptTimestamp,
+              countryCode: job.countryCode,
+              regionCode: job.regionCode,
+              ispName: job.ispName,
             });
           } else if (job.jobState === 'dispatched') {
             await this.database.replaceJob({
@@ -91,6 +94,9 @@ export default class Dispatcher {
               rejectTimestamp: new Date(),
               dispatchTimestamp: job.dispatchTimestamp,
               providerId: job.providerId,
+              countryCode: job.countryCode,
+              regionCode: job.regionCode,
+              ispName: job.ispName,
             });
           }
         }));
@@ -131,6 +137,9 @@ export default class Dispatcher {
       dispatchTimestamp: job.dispatchTimestamp,
       acceptTimestamp: new Date(),
       jobState: 'accepted',
+      countryCode: job.countryCode,
+      regionCode: job.regionCode,
+      ispName: job.ispName,
     });
   }
 
@@ -145,6 +154,9 @@ export default class Dispatcher {
       dispatchTimestamp: job.dispatchTimestamp,
       rejectTimestamp: new Date(),
       jobState: 'rejected',
+      countryCode: job.countryCode,
+      regionCode: job.regionCode,
+      ispName: job.ispName,
     });
   }
 
@@ -164,6 +176,9 @@ export default class Dispatcher {
       acceptTimestamp: job.acceptTimestamp,
       cancelTimestamp: new Date(),
       jobState: 'canceled',
+      countryCode: job.countryCode,
+      regionCode: job.regionCode,
+      ispName: job.ispName,
     });
   }
 
@@ -184,6 +199,9 @@ export default class Dispatcher {
       completeTimestamp: new Date(),
       result,
       jobState: 'completed',
+      countryCode: job.countryCode,
+      regionCode: job.regionCode,
+      ispName: job.ispName,
     });
   }
 
@@ -227,6 +245,9 @@ export default class Dispatcher {
         jobState: 'dispatched',
         queryId: query._id,
         dispatchTimestamp: new Date(),
+        countryCode: providerConnection.countryCode,
+        regionCode: providerConnection.regionCode,
+        ispName: providerConnection.ispName,
       });
 
       ProviderManager.dispatchJob(providerConnection.socket, query, jobId.toHexString());
