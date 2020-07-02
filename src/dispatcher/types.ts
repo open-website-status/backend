@@ -36,6 +36,12 @@ export const WebsiteQueryMessage = t.type({
 
 export type WebsiteQueryMessage = t.TypeOf<typeof WebsiteQueryMessage>;
 
+export const GetQueryMessage = t.type({
+  queryId: t.string,
+});
+
+export type GetQueryMessage = t.TypeOf<typeof GetQueryMessage>;
+
 export const ProviderJobAcceptMessage = t.type({
   jobId: t.string,
 });
@@ -73,5 +79,7 @@ export type CompleteJobFunction = (socket: SocketIO.Socket, jobId: string, resul
 export type DispatchAPIQueryFunction = (data: APIQueryMessage) => Promise<QueryMessage>;
 
 export type DispatchWebsiteQueryFunction = (data: WebsiteQueryMessage) => Promise<QueryMessage>;
+
+export type GetQueryFunction = (queryId: string) => Promise<QueryMessage>;
 
 export type IONext = (err?: unknown) => void;

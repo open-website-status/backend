@@ -5,7 +5,7 @@ import {
   AcknowledgementCallbackData,
   APIQueryMessage,
   DispatchAPIQueryFunction,
-  DispatchWebsiteQueryFunction,
+  DispatchWebsiteQueryFunction, GetQueryFunction, GetQueryMessage,
   QueryMessage,
   UnsafeCallback,
   WebsiteQueryMessage,
@@ -21,15 +21,19 @@ export default class APIManager extends Emitter<never> {
 
   private readonly dispatchWebsiteQuery: DispatchWebsiteQueryFunction;
 
+  private readonly getQuery: GetQueryFunction;
+
   public constructor(
     socketManager: SocketManager,
     dispatchAPIQueryFunction: DispatchAPIQueryFunction,
     dispatchWebsiteQueryFunction: DispatchWebsiteQueryFunction,
+    getQueryFunction: GetQueryFunction,
   ) {
     super();
 
     this.dispatchAPIQuery = dispatchAPIQueryFunction;
     this.dispatchWebsiteQuery = dispatchWebsiteQueryFunction;
+    this.getQuery = getQueryFunction;
 
     this.socketServer = SocketIO(socketManager.httpServer, {
       path: '/api-socket',
@@ -44,6 +48,11 @@ export default class APIManager extends Emitter<never> {
       socket.on(
         'query',
         (data, callback: AcknowledgementCallbackData<QueryMessage>) => this.onAPIQuery(socket, data, callback),
+      );
+
+      socket.on(
+        'get-query',
+        (data, callback: AcknowledgementCallbackData<QueryMessage>) => this.onGetQuery(socket, data, callback),
       );
     });
   }
@@ -73,6 +82,21 @@ export default class APIManager extends Emitter<never> {
         } catch (error) {
           console.error(error);
           safeDataCallback(callback, error instanceof Error ? error.message : 'Failed to dispatch query', null);
+        }
+      },
+    ));
+  }
+
+  private onGetQuery(socket: SocketIO.Socket, data: unknown, callback: UnsafeCallback<AcknowledgementCallbackData<QueryMessage>>): void {
+    pipe(GetQueryMessage.decode(data), fold(
+      () => safeDataCallback(callback, 'Request does not match schema', null),
+      async (parsedData): Promise<void> => {
+        try {
+          const query = await this.getQuery(parsedData.queryId);
+          safeDataCallback(callback, null, query);
+        } catch (error) {
+          console.error(error);
+          safeDataCallback(callback, error instanceof Error ? error.message : 'Failed to get query info', null);
         }
       },
     ));

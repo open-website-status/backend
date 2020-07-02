@@ -38,6 +38,7 @@ export default class Dispatcher {
       this.socketManager,
       (data: APIQueryMessage) => this.dispatchAPIQuery(data),
       (data: WebsiteQueryMessage) => this.dispatchWebsiteQuery(data),
+      (queryId: string) => this.getQuery(queryId),
     );
   }
 
@@ -259,6 +260,18 @@ export default class Dispatcher {
       path: query.path,
       protocol: query.protocol,
       timestamp: query.timestamp,
+    };
+  }
+
+  private async getQuery(queryId: string): Promise<QueryMessage> {
+    const query = await this.database.getQueryById(Database.getObjectIdFromHexString(queryId));
+    if (query === null) throw new Error('Query not found');
+    return {
+      id: queryId,
+      timestamp: query.timestamp,
+      protocol: query.protocol,
+      path: query.path,
+      host: query.host,
     };
   }
 }
