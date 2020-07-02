@@ -12,21 +12,21 @@ export interface BaseJob {
   ispName: string,
 }
 
-export interface DispatchedJob extends BaseJob {
+export interface DispatchedJob {
   jobState: 'dispatched';
 }
 
-export interface AcceptedJob extends BaseJob {
+export interface AcceptedJob {
   jobState: 'accepted';
   acceptTimestamp: Date;
 }
 
-export interface RejectedJob extends BaseJob {
+export interface RejectedJob {
   jobState: 'rejected';
   rejectTimestamp: Date;
 }
 
-export interface CanceledJob extends BaseJob {
+export interface CanceledJob {
   jobState: 'canceled';
   acceptTimestamp: Date;
   cancelTimestamp: Date;
@@ -55,11 +55,11 @@ export const JobResult = t.union([JobResultSuccess, JobResultTimeout, JobResultE
 
 export type JobResult = t.TypeOf<typeof JobResult>;
 
-export interface CompletedJob extends BaseJob {
+export interface CompletedJob {
   jobState: 'completed';
   acceptTimestamp: Date;
   completeTimestamp: Date;
   result: JobResult;
 }
 
-export type Job = DispatchedJob | AcceptedJob | RejectedJob | CanceledJob | CompletedJob;
+export type Job = BaseJob & (DispatchedJob | AcceptedJob | RejectedJob | CanceledJob | CompletedJob);

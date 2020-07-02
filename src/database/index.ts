@@ -69,6 +69,13 @@ export default class Database {
     }, job);
   }
 
+  public async removeJob(id: ObjectId): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+    await this.db.collection('jobs').deleteOne({
+      _id: id,
+    });
+  }
+
   public static getObjectIdFromHexString(string: string): ObjectId {
     return new ObjectId(string);
   }

@@ -1,6 +1,8 @@
 import * as t from 'io-ts';
 import SocketIO from 'socket.io';
-import { JobResult, Provider } from '../database/types';
+import { JobResult, Provider } from '../../database/types';
+
+export * from './jobs';
 
 export interface QueryMessage {
   id: string;

@@ -1,11 +1,16 @@
 import { fold } from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import SocketIO from 'socket.io';
+import { Job } from '../database/types';
 import {
   AcknowledgementCallbackData,
-  APIQueryMessage,
+  APIQueryMessage, BaseJobMessage,
   DispatchAPIQueryFunction,
-  DispatchWebsiteQueryFunction, GetQueryFunction, GetQueryMessage,
+  DispatchWebsiteQueryFunction,
+  GetQueryFunction,
+  GetQueryMessage,
+  JobCreateAndChangeMessage,
+  JobDeleteMessage,
   QueryMessage,
   UnsafeCallback,
   WebsiteQueryMessage,
@@ -100,5 +105,73 @@ export default class APIManager extends Emitter<never> {
         }
       },
     ));
+  }
+
+  private static getJobMessage(job: Job): JobCreateAndChangeMessage {
+    const message: Omit<BaseJobMessage, 'jobState'> = {
+      id: job._id.toHexString(),
+      queryId: job.queryId.toHexString(),
+      dispatchTimestamp: job.dispatchTimestamp,
+      countryCode: job.countryCode,
+      regionCode: job.regionCode,
+      ispName: job.ispName,
+    };
+
+    if (job.jobState === 'accepted') {
+      return {
+        ...message,
+        jobState: 'accepted',
+        acceptTimestamp: job.acceptTimestamp,
+      };
+    }
+    if (job.jobState === 'rejected') {
+      return {
+        ...message,
+        jobState: 'rejected',
+        rejectTimestamp: job.rejectTimestamp,
+      };
+    }
+    if (job.jobState === 'canceled') {
+      return {
+        ...message,
+        jobState: 'canceled',
+        acceptTimestamp: job.acceptTimestamp,
+        cancelTimestamp: job.cancelTimestamp,
+      };
+    }
+    if (job.jobState === 'completed') {
+      return {
+        ...message,
+        jobState: 'completed',
+        acceptTimestamp: job.acceptTimestamp,
+        completeTimestamp: job.completeTimestamp,
+        result: job.result,
+      };
+    } // if (job.jobState === 'dispatched')
+    return {
+      ...message,
+      jobState: job.jobState,
+    };
+  }
+
+  public emitJobCreate(job: Job): void {
+    const message = APIManager.getJobMessage(job);
+    this.socketServer.in(`queries/${message.queryId}`).emit('job-create', message);
+    this.socketServer.in(`jobs/${message.id}`).emit('job-create', message);
+  }
+
+  public emitJobModify(job: Job): void {
+    const message = APIManager.getJobMessage(job);
+    this.socketServer.in(`queries/${message.queryId}`).emit('job-modify', message);
+    this.socketServer.in(`jobs/${message.id}`).emit('job-modify', message);
+  }
+
+  public emitJobDelete(jobId: string, queryId: string): void {
+    const message: JobDeleteMessage = {
+      id: jobId,
+      queryId,
+    };
+    this.socketServer.in(`queries/${jobId}`).emit('job-delete', message);
+    this.socketServer.in(`jobs/${queryId}`).emit('job-delete', message);
   }
 }

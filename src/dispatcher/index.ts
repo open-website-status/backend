@@ -1,6 +1,9 @@
 import SocketIO from 'socket.io';
 import Database from '../database';
-import { Job, JobResult, Query } from '../database/types';
+import {
+  BaseJob,
+  DispatchedJob, Job, JobResult, Query,
+} from '../database/types';
 import SocketManager from '../socket-manager';
 import APIManager from '../socket-manager/api-manager';
 import ProviderManager from '../socket-manager/provider-manager';
@@ -75,7 +78,7 @@ export default class Dispatcher {
         const jobs = await this.database.findJobsByProviderId(providerConnection.provider._id);
         await Promise.all(jobs.map(async (job) => {
           if (job.jobState === 'accepted') {
-            await this.database.replaceJob({
+            await this.modifyJob({
               _id: job._id,
               queryId: job.queryId,
               jobState: 'canceled',
@@ -88,7 +91,7 @@ export default class Dispatcher {
               ispName: job.ispName,
             });
           } else if (job.jobState === 'dispatched') {
-            await this.database.replaceJob({
+            await this.modifyJob({
               _id: job._id,
               queryId: job.queryId,
               jobState: 'rejected',
@@ -131,7 +134,7 @@ export default class Dispatcher {
     const providerConnection = this.getProviderConnection(socket);
     const job = await this.getAndVerifyJob(providerConnection, jobId);
 
-    await this.database.replaceJob({
+    await this.modifyJob({
       _id: job._id,
       queryId: job.queryId,
       providerId: job.providerId,
@@ -148,7 +151,7 @@ export default class Dispatcher {
     const providerConnection = this.getProviderConnection(socket);
     const job = await this.getAndVerifyJob(providerConnection, jobId);
 
-    await this.database.replaceJob({
+    await this.modifyJob({
       _id: job._id,
       queryId: job.queryId,
       providerId: job.providerId,
@@ -169,7 +172,7 @@ export default class Dispatcher {
       throw new Error('Job state is not accepted');
     }
 
-    await this.database.replaceJob({
+    await this.modifyJob({
       _id: job._id,
       queryId: job.queryId,
       providerId: job.providerId,
@@ -191,7 +194,7 @@ export default class Dispatcher {
       throw new Error('Job state is not accepted or canceled');
     }
 
-    await this.database.replaceJob({
+    await this.modifyJob({
       _id: job._id,
       queryId: job.queryId,
       providerId: job.providerId,
@@ -240,7 +243,7 @@ export default class Dispatcher {
 
     await Promise.all(this.connectedProviders.map(async (providerConnection): Promise<void> => {
       const jobId = Database.generateObjectId();
-      await this.database.createJob({
+      const job: BaseJob & DispatchedJob = {
         _id: jobId,
         providerId: providerConnection.provider._id,
         jobState: 'dispatched',
@@ -249,8 +252,9 @@ export default class Dispatcher {
         countryCode: providerConnection.countryCode,
         regionCode: providerConnection.regionCode,
         ispName: providerConnection.ispName,
-      });
+      };
 
+      await this.createJob(job);
       ProviderManager.dispatchJob(providerConnection.socket, query, jobId.toHexString());
     }));
 
@@ -273,5 +277,20 @@ export default class Dispatcher {
       path: query.path,
       host: query.host,
     };
+  }
+
+  private async createJob(job: Job): Promise<void> {
+    await this.database.createJob(job);
+    this.apiManager.emitJobCreate(job);
+  }
+
+  private async modifyJob(job: Job): Promise<void> {
+    await this.database.replaceJob(job);
+    this.apiManager.emitJobModify(job);
+  }
+
+  private async removeJob(jobId: string, queryId: string): Promise<void> {
+    await this.database.removeJob(Database.getObjectIdFromHexString(jobId));
+    this.apiManager.emitJobDelete(jobId, queryId);
   }
 }
