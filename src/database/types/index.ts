@@ -10,7 +10,7 @@ export interface Provider {
 export interface Query {
   _id: ObjectId;
   timestamp: Date;
-  protocol: 'http' | 'https';
+  protocol: 'http:' | 'https:';
   /**
    * API client id with which the call was made: null is used for website access
    */

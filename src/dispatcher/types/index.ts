@@ -7,7 +7,7 @@ export * from './jobs';
 export interface QueryMessage {
   id: string;
   timestamp: Date;
-  protocol: 'http' | 'https';
+  protocol: 'http:' | 'https:';
   host: string;
   path: string;
 }
@@ -22,7 +22,7 @@ export interface ProviderConnection {
 
 export const APIQueryMessage = t.type({
   token: t.string,
-  protocol: t.union([t.literal('http'), t.literal('https')]),
+  protocol: t.union([t.literal('http:'), t.literal('https:')]),
   host: t.string,
   path: t.string,
 });
@@ -31,7 +31,7 @@ export type APIQueryMessage = t.TypeOf<typeof APIQueryMessage>;
 
 export const WebsiteQueryMessage = t.type({
   /* TODO: ADD CAPTCHA RESPONSE */
-  protocol: t.union([t.literal('http'), t.literal('https')]),
+  protocol: t.union([t.literal('http:'), t.literal('https:')]),
   host: t.string,
   path: t.string,
 });
