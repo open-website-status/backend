@@ -50,7 +50,7 @@ export const GetQueryMessage = t.type({
 
 export type GetQueryMessage = t.TypeOf<typeof GetQueryMessage>;
 
-export type ProviderJobMessage = ({
+export interface ProviderJobMessage {
   jobId: string,
   queryId: string,
   protocol: 'http:' | 'https:',
@@ -58,7 +58,7 @@ export type ProviderJobMessage = ({
   port: number | undefined,
   pathname: string,
   search: string,
-});
+}
 
 export const ProviderJobAcceptMessage = t.type({
   jobId: t.string,
