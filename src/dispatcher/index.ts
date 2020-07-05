@@ -8,6 +8,7 @@ import SocketManager from '../socket-manager';
 import APIManager from '../socket-manager/api-manager';
 import ProviderManager from '../socket-manager/provider-manager';
 import { getIPInfo } from '../utils/get-ip-info';
+import verifyReCaptcha from '../utils/recaptcha';
 import {
   APIQueryMessage, ProviderConnection, QueryMessage, WebsiteQueryMessage,
 } from './types';
@@ -218,22 +219,27 @@ export default class Dispatcher {
 
     return this.dispatchQuery({
       _id: Database.generateObjectId(),
-      path: data.path,
+      hostname: data.hostname,
+      pathname: data.pathname,
+      port: data.port,
       protocol: data.protocol,
       timestamp: new Date(),
-      host: data.host,
       apiClientId: apiClient._id,
     });
   }
 
-  // TODO: Implement CAPTCHA
   private async dispatchWebsiteQuery(data: WebsiteQueryMessage): Promise<QueryMessage> {
+    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse);
+
+    if (!captchaValid) throw new Error('Captcha verification failed');
+
     return this.dispatchQuery({
       _id: Database.generateObjectId(),
-      path: data.path,
+      hostname: data.hostname,
+      pathname: data.pathname,
+      port: data.port,
       protocol: data.protocol,
       timestamp: new Date(),
-      host: data.host,
       apiClientId: null,
     });
   }
@@ -260,8 +266,9 @@ export default class Dispatcher {
 
     return {
       id: query._id.toHexString(),
-      host: query.host,
-      path: query.path,
+      hostname: query.hostname,
+      pathname: query.pathname,
+      port: query.port,
       protocol: query.protocol,
       timestamp: query.timestamp,
     };
@@ -274,8 +281,9 @@ export default class Dispatcher {
       id: queryId,
       timestamp: query.timestamp,
       protocol: query.protocol,
-      path: query.path,
-      host: query.host,
+      pathname: query.pathname,
+      hostname: query.hostname,
+      port: query.port,
     };
   }
 

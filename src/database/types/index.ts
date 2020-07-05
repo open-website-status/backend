@@ -16,13 +16,14 @@ export interface Query {
    */
   apiClientId: ObjectId | null;
   /**
-   * URL host: For example: "www.google.com"
+   * URL host: For example: "www.google.com", not "www.google.com:3000"
    */
-  host: string;
+  hostname: string;
   /** URL
-   * pathname: For example: "/doodles/"
+   * pathname: For example: "/doodles/", "/"
    */
-  path: string;
+  pathname: string;
+  port: number | undefined;
 }
 
 export interface APIClient {

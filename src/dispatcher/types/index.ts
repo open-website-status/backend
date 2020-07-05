@@ -8,8 +8,9 @@ export interface QueryMessage {
   id: string;
   timestamp: Date;
   protocol: 'http:' | 'https:';
-  host: string;
-  path: string;
+  hostname: string;
+  port: number | undefined;
+  pathname: string;
 }
 
 export interface ProviderConnection {
@@ -23,17 +24,19 @@ export interface ProviderConnection {
 export const APIQueryMessage = t.type({
   token: t.string,
   protocol: t.union([t.literal('http:'), t.literal('https:')]),
-  host: t.string,
-  path: t.string,
+  hostname: t.string,
+  port: t.union([t.number, t.undefined]),
+  pathname: t.string,
 });
 
 export type APIQueryMessage = t.TypeOf<typeof APIQueryMessage>;
 
 export const WebsiteQueryMessage = t.type({
-  /* TODO: ADD CAPTCHA RESPONSE */
   protocol: t.union([t.literal('http:'), t.literal('https:')]),
-  host: t.string,
-  path: t.string,
+  hostname: t.string,
+  port: t.union([t.number, t.undefined]),
+  pathname: t.string,
+  reCaptchaResponse: t.string,
 });
 
 export type WebsiteQueryMessage = t.TypeOf<typeof WebsiteQueryMessage>;
