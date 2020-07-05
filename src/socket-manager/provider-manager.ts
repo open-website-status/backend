@@ -11,7 +11,7 @@ import {
   ProviderInitFunction,
   ProviderJobAcceptMessage,
   ProviderJobCancelMessage,
-  ProviderJobCompleteMessage,
+  ProviderJobCompleteMessage, ProviderJobMessage,
   ProviderJobRejectMessage,
   RejectJobFunction, UnsafeCallback,
 } from '../dispatcher/types';
@@ -128,12 +128,16 @@ export default class ProviderManager extends Emitter<{
   }
 
   public static dispatchJob(socket: SocketIO.Socket, query: Query, jobId: string): void {
-    socket.emit('dispatch-job', {
-      id: jobId,
+    const message: ProviderJobMessage = {
+      jobId,
+      queryId: query._id.toHexString(),
       protocol: query.protocol,
-      host: query.host,
-      path: query.path,
-    });
+      hostname: query.hostname,
+      pathname: query.pathname,
+      port: query.port,
+      search: query.search,
+    };
+    socket.emit('dispatch-job', message);
   }
 
   private initMiddleware(socket: SocketIO.Socket, next: IONext): void {

@@ -19,11 +19,15 @@ export interface Query {
    * URL host: For example: "www.google.com", not "www.google.com:3000"
    */
   hostname: string;
-  /** URL
+  /**
    * pathname: For example: "/doodles/", "/"
    */
   pathname: string;
   port: number | undefined;
+  /**
+   * search query: For example: "?v=dQw4w9WgXcQ", ""
+   */
+  search: string;
 }
 
 export interface APIClient {

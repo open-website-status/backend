@@ -11,6 +11,7 @@ export interface QueryMessage {
   hostname: string;
   port: number | undefined;
   pathname: string;
+  search: string;
 }
 
 export interface ProviderConnection {
@@ -27,6 +28,7 @@ export const APIQueryMessage = t.type({
   hostname: t.string,
   port: t.union([t.number, t.undefined]),
   pathname: t.string,
+  search: t.string,
 });
 
 export type APIQueryMessage = t.TypeOf<typeof APIQueryMessage>;
@@ -36,6 +38,7 @@ export const WebsiteQueryMessage = t.type({
   hostname: t.string,
   port: t.union([t.number, t.undefined]),
   pathname: t.string,
+  search: t.string,
   reCaptchaResponse: t.string,
 });
 
@@ -46,6 +49,16 @@ export const GetQueryMessage = t.type({
 });
 
 export type GetQueryMessage = t.TypeOf<typeof GetQueryMessage>;
+
+export type ProviderJobMessage = ({
+  jobId: string,
+  queryId: string,
+  protocol: 'http:' | 'https:',
+  hostname: string,
+  port: number | undefined,
+  pathname: string,
+  search: string,
+});
 
 export const ProviderJobAcceptMessage = t.type({
   jobId: t.string,

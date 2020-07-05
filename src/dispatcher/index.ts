@@ -222,6 +222,7 @@ export default class Dispatcher {
       hostname: data.hostname,
       pathname: data.pathname,
       port: data.port,
+      search: data.search,
       protocol: data.protocol,
       timestamp: new Date(),
       apiClientId: apiClient._id,
@@ -239,6 +240,7 @@ export default class Dispatcher {
       pathname: data.pathname,
       port: data.port,
       protocol: data.protocol,
+      search: data.search,
       timestamp: new Date(),
       apiClientId: null,
     });
@@ -271,6 +273,7 @@ export default class Dispatcher {
       port: query.port,
       protocol: query.protocol,
       timestamp: query.timestamp,
+      search: query.search,
     };
   }
 
@@ -284,6 +287,7 @@ export default class Dispatcher {
       pathname: query.pathname,
       hostname: query.hostname,
       port: query.port,
+      search: query.search,
     };
   }
 
