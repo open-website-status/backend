@@ -22,7 +22,7 @@ export interface IPInfo {
 }
 
 export async function getIPInfo(address: string): Promise<IPInfo> {
-  const checkedAddress = address === '::ffff:127.0.0.1' ? '' : address;
+  const checkedAddress = address === '::ffff:127.0.0.1' || address.startsWith('::ffff:192.168.') ? '' : address;
 
   const response = await got.get(`http://ip-api.com/json/${checkedAddress}?fields=status,countryCode,region,isp`, {
     responseType: 'json',
@@ -30,7 +30,10 @@ export async function getIPInfo(address: string): Promise<IPInfo> {
 
   const parsedResponse = await tPromise.decode(IPApiResponse, response.body);
 
-  if (parsedResponse.status === 'fail') throw new Error('IP info check failed');
+  if (parsedResponse.status === 'fail') {
+    console.log(`IP info check failed for address: ${address}`);
+    throw new Error('IP info check failed');
+  }
 
   return {
     countryCode: parsedResponse.countryCode.toLowerCase(),
