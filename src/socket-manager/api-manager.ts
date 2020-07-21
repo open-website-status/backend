@@ -15,11 +15,10 @@ import {
   UnsafeCallback,
   WebsiteQueryMessage,
 } from '../dispatcher/types';
-import { Emitter } from '../utils/emitter';
 import { safeDataCallback } from '../utils/safe-socket-callback';
 import SocketManager from './index';
 
-export default class APIManager extends Emitter<never> {
+export default class APIManager {
   public readonly socketServer: SocketIO.Server;
 
   private readonly dispatchAPIQuery: DispatchAPIQueryFunction;
@@ -34,8 +33,6 @@ export default class APIManager extends Emitter<never> {
     dispatchWebsiteQueryFunction: DispatchWebsiteQueryFunction,
     getQueryFunction: GetQueryFunction,
   ) {
-    super();
-
     this.dispatchAPIQuery = dispatchAPIQueryFunction;
     this.dispatchWebsiteQuery = dispatchWebsiteQueryFunction;
     this.getQuery = getQueryFunction;

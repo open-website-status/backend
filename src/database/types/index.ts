@@ -39,4 +39,9 @@ export interface APIClient {
   name: string;
 }
 
+export interface User {
+  _id: ObjectId;
+  firebaseUid: string;
+}
+
 export * from './jobs';

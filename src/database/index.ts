@@ -1,6 +1,6 @@
 import { Db, MongoClient, ObjectId } from 'mongodb';
 import {
-  APIClient, Job, Provider, Query,
+  APIClient, Job, Provider, Query, User,
 } from './types';
 
 export default class Database {
@@ -74,6 +74,16 @@ export default class Database {
     await this.db.collection('jobs').deleteOne({
       _id: id,
     });
+  }
+
+  public async findUserByFirebaseUid(uid: string): Promise<User | null> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('users').findOne({ firebaseUid: uid });
+  }
+
+  public async createUser(user: User): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+    await this.db.collection('users').insertOne(user);
   }
 
   public static getObjectIdFromHexString(string: string): ObjectId {

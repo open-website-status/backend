@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import Console from './console';
 import Database from './database';
 import Dispatcher from './dispatcher';
 import SocketManager from './socket-manager';
@@ -11,6 +12,7 @@ async function main(): Promise<void> {
   const socketPort = process.env.SOCKET_PORT === undefined ? 3000 : parseInt(process.env.SOCKET_PORT, 10);
   const socketManager = new SocketManager(socketPort);
   const dispatcher = new Dispatcher(socketManager, database);
+  const console = new Console(socketManager, database);
 }
 
 main()

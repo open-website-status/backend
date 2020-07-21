@@ -16,6 +16,7 @@
     "@types/node": "^14.0.24",
     "@types/socket.io": "^2.1.9",
     "dotenv": "^8.2.0",
+    "firebase-admin": "^9.0.0",
     "fp-ts": "^2.7.0",
     "got": "^11.5.1",
     "io-ts": "^2.2.9",
