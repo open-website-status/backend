@@ -36,7 +36,9 @@ export default class Dispatcher {
       (socket, jobId) => this.cancelJob(socket, jobId),
       (socket, jobId, result) => this.completeJob(socket, jobId, result),
     );
-    this.providerManager.on('disconnect', (socket) => this.onDisconnect(socket));
+    this.providerManager.on(this.providerManager.onDisconnect, (socket) => {
+      this.onDisconnect(socket).finally(() => {});
+    });
 
     this.apiManager = new APIManager(
       this.socketManager,

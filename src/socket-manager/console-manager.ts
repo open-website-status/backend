@@ -2,14 +2,14 @@ import { fold } from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import * as t from 'io-ts';
 import SocketIO from 'socket.io';
+import { EventEmitter } from 'typed-event-emitter';
 import { InitUserFunction } from '../console/types';
 import { IONext } from '../dispatcher/types';
-import { Emitter } from '../utils/emitter';
 import SocketManager from './index';
 
-export default class ConsoleManager extends Emitter<{
-  disconnect: SocketIO.Socket
-}> {
+export default class ConsoleManager extends EventEmitter {
+  public onDisconnect = this.registerEvent<(socket: SocketIO.Socket) => unknown>();
+
   private socketManager: SocketManager;
 
   private socketServer: SocketIO.Server;
@@ -37,7 +37,7 @@ export default class ConsoleManager extends Emitter<{
       console.log('Console connection', socket.id);
 
       socket.on('disconnect', () => {
-        this.emit('disconnect', socket);
+        this.emit(this.onDisconnect, socket);
       });
     });
   }

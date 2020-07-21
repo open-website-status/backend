@@ -22,7 +22,7 @@ export default class Console {
       (socket, token) => this.initUser(socket, token),
     );
 
-    this.consoleManager.on('disconnect', (socket) => this.onDisconnect(socket));
+    this.consoleManager.on(this.consoleManager.onDisconnect, (socket) => this.onDisconnect(socket));
   }
 
   private async initUser(socket: SocketIO.Socket, token: string): Promise<void> {

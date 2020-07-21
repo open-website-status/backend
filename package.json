@@ -24,6 +24,7 @@
     "mongodb": "^3.5.9",
     "socket.io": "^2.3.0",
     "ts-node": "^8.10.2",
+    "typed-event-emitter": "^2.0.0",
     "typescript": "^3.9.7"
   },
   "devDependencies": {

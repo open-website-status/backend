@@ -2,6 +2,7 @@ import { fold } from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import * as t from 'io-ts';
 import SocketIO from 'socket.io';
+import { EventEmitter } from 'typed-event-emitter';
 import { Query } from '../database/types';
 import {
   AcceptJobFunction, AcknowledgementCallbackEmpty,
@@ -15,13 +16,12 @@ import {
   ProviderJobRejectMessage,
   RejectJobFunction, UnsafeCallback,
 } from '../dispatcher/types';
-import { Emitter } from '../utils/emitter';
 import { safeEmptyCallback } from '../utils/safe-socket-callback';
 import SocketManager from './index';
 
-export default class ProviderManager extends Emitter<{
-  disconnect: SocketIO.Socket,
-}> {
+export default class ProviderManager extends EventEmitter {
+  public onDisconnect = this.registerEvent<(socket: SocketIO.Socket) => unknown>();
+
   public readonly socketServer: SocketIO.Server;
 
   private readonly initProvider: ProviderInitFunction;
@@ -62,7 +62,7 @@ export default class ProviderManager extends Emitter<{
       console.log('a user connected');
 
       socket.on('disconnect', () => {
-        this.emit('disconnect', socket);
+        this.emit(this.onDisconnect, socket);
       });
 
       socket.on('accept-job', (data: unknown, callback: UnsafeCallback<AcknowledgementCallbackEmpty>) => {
