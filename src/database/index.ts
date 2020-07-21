@@ -21,7 +21,7 @@ export default class Database {
 
   public async connect(): Promise<void> {
     await this.client.connect();
-    const dbName = 'open-website-status';
+    const dbName = process.env.MONGODB_DB_NAME;
     this.db = this.client.db(dbName);
   }
 
