@@ -64,7 +64,7 @@ export default class ConsoleManager extends EventEmitter {
           () => safeEmptyCallback(callback, 'Request does not match schema'),
           async (parsedData) => {
             try {
-              const providerMessage = await this.createProvider(socket, parsedData.name);
+              const providerMessage = await this.createProvider(socket, parsedData);
               safeDataCallback(callback, null, providerMessage);
             } catch (error) {
               console.error(error);

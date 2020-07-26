@@ -6,7 +6,8 @@ import { Provider } from '../database/types';
 import FirebaseManager from '../firebase-manager';
 import SocketManager from '../socket-manager';
 import ConsoleManager from '../socket-manager/console-manager';
-import { ConsoleConnection, ProviderMessage } from './types';
+import verifyReCaptcha from '../utils/recaptcha';
+import { ConsoleConnection, CreateProviderMessage, ProviderMessage } from './types';
 
 export default class Console {
   private socketManager: SocketManager;
@@ -24,7 +25,7 @@ export default class Console {
     this.consoleManager = new ConsoleManager(
       socketManager,
       (socket, token) => this.initUser(socket, token),
-      (socket, name) => this.createProvider(socket, name),
+      (socket, data) => this.createProvider(socket, data),
       (socket, id, name) => this.renameProvider(socket, id, name),
       ((socket, id) => this.resetProviderToken(socket, id)),
     );
@@ -66,15 +67,19 @@ export default class Console {
     this.consoleConnections = this.consoleConnections.filter((item) => item.socket.id !== socket.id);
   }
 
-  private async createProvider(socket: SocketIO.Socket, name: string): Promise<ProviderMessage> {
+  private async createProvider(socket: SocketIO.Socket, data: CreateProviderMessage): Promise<ProviderMessage> {
     const connection = this.consoleConnections.find(((e) => e.socket.id === socket.id));
     if (connection === undefined) throw new Error('No connection of this socket');
+
+    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse);
+    if (!captchaValid) throw new Error('Captcha verification failed');
+
     const userId = Database.getObjectIdFromHexString(connection.userId);
 
     const provider: Provider = {
       _id: Database.generateObjectId(),
       token: Console.generateToken(),
-      name,
+      name: data.name,
       userId,
     };
     await this.database.createProvider(provider);
@@ -94,7 +99,7 @@ export default class Console {
     return {
       id: provider._id.toHexString(),
       token: provider.token,
-      name,
+      name: provider.name,
     };
   }
 
