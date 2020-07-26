@@ -1,4 +1,4 @@
-import { AcknowledgementCallbackData, AcknowledgementCallbackEmpty, UnsafeCallback } from '../dispatcher/types';
+import { AcknowledgementCallbackData, AcknowledgementCallbackEmpty, UnsafeCallback } from '../socket-manager/types';
 
 export function safeDataCallback<T>(
   callback: UnsafeCallback<AcknowledgementCallbackData<T>>,

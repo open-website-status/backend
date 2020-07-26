@@ -51,7 +51,7 @@ export default class Dispatcher {
       throw new Error('This provider has already been initialized');
     }
 
-    const provider = await this.database.getProviderByToken(token);
+    const provider = await this.database.findProviderByToken(token);
     if (provider === null) {
       throw new Error('Invalid token');
     }

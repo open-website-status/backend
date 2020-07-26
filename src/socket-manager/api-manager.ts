@@ -3,7 +3,6 @@ import { pipe } from 'fp-ts/lib/pipeable';
 import SocketIO from 'socket.io';
 import { Job } from '../database/types';
 import {
-  AcknowledgementCallbackData,
   APIQueryMessage, BaseJobMessage,
   DispatchAPIQueryFunction,
   DispatchWebsiteQueryFunction,
@@ -12,10 +11,10 @@ import {
   JobCreateAndChangeMessage,
   JobDeleteMessage,
   QueryMessage,
-  UnsafeCallback,
   WebsiteQueryMessage,
 } from '../dispatcher/types';
 import { safeDataCallback } from '../utils/safe-socket-callback';
+import { AcknowledgementCallbackData, UnsafeCallback } from './types';
 import SocketManager from './index';
 
 export default class APIManager {

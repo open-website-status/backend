@@ -5,7 +5,7 @@ import SocketIO from 'socket.io';
 import { EventEmitter } from 'typed-event-emitter';
 import { Query } from '../database/types';
 import {
-  AcceptJobFunction, AcknowledgementCallbackEmpty,
+  AcceptJobFunction,
   CancelJobFunction,
   CompleteJobFunction,
   IONext,
@@ -14,9 +14,10 @@ import {
   ProviderJobCancelMessage,
   ProviderJobCompleteMessage, ProviderJobMessage,
   ProviderJobRejectMessage,
-  RejectJobFunction, UnsafeCallback,
+  RejectJobFunction,
 } from '../dispatcher/types';
 import { safeEmptyCallback } from '../utils/safe-socket-callback';
+import { AcknowledgementCallbackEmpty, UnsafeCallback } from './types';
 import SocketManager from './index';
 
 export default class ProviderManager extends EventEmitter {

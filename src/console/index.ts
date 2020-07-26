@@ -1,8 +1,12 @@
+import { ObjectId } from 'mongodb';
+import srs from 'secure-random-string';
 import SocketIO, { Socket } from 'socket.io';
 import Database from '../database';
+import { Provider } from '../database/types';
 import FirebaseManager from '../firebase-manager';
 import SocketManager from '../socket-manager';
 import ConsoleManager from '../socket-manager/console-manager';
+import { ConsoleConnection, ProviderMessage } from './types';
 
 export default class Console {
   private socketManager: SocketManager;
@@ -11,7 +15,7 @@ export default class Console {
 
   private consoleManager: ConsoleManager;
 
-  private socketUserIds = new Map<string, string>();
+  private consoleConnections = new Array<ConsoleConnection>();
 
   public constructor(socketManager: SocketManager, database: Database) {
     this.socketManager = socketManager;
@@ -20,6 +24,9 @@ export default class Console {
     this.consoleManager = new ConsoleManager(
       socketManager,
       (socket, token) => this.initUser(socket, token),
+      (socket, name) => this.createProvider(socket, name),
+      (socket, id, name) => this.renameProvider(socket, id, name),
+      ((socket, id) => this.resetProviderToken(socket, id)),
     );
 
     this.consoleManager.onDisconnect((socket) => this.onDisconnect(socket));
@@ -35,10 +42,139 @@ export default class Console {
       };
       await this.database.createUser(user);
     }
-    this.socketUserIds.set(socket.id, user._id.toHexString());
+
+    this.consoleConnections.push({
+      socket,
+      firebaseUid: uid,
+      userId: user._id.toHexString(),
+    });
+
+    await this.sendProviders(user._id, [socket]);
+  }
+
+  private async sendProviders(userId: ObjectId, sockets: SocketIO.Socket[]): Promise<void> {
+    const providers = await this.database.findProvidersByUserId(userId);
+    const messageProviders: ProviderMessage[] = providers.map((provider) => ({
+      id: provider._id.toHexString(),
+      name: provider.name,
+      token: provider.token,
+    }));
+    ConsoleManager.sendProviderList(sockets, messageProviders);
   }
 
   private onDisconnect(socket: Socket): void {
-    this.socketUserIds.delete(socket.id);
+    this.consoleConnections = this.consoleConnections.filter((item) => item.socket.id !== socket.id);
+  }
+
+  private async createProvider(socket: SocketIO.Socket, name: string): Promise<ProviderMessage> {
+    const connection = this.consoleConnections.find(((e) => e.socket.id === socket.id));
+    if (connection === undefined) throw new Error('No connection of this socket');
+    const userId = Database.getObjectIdFromHexString(connection.userId);
+
+    const provider: Provider = {
+      _id: Database.generateObjectId(),
+      token: Console.generateToken(),
+      name,
+      userId,
+    };
+    await this.database.createProvider(provider);
+    const providers = await this.database.findProvidersByUserId(userId);
+
+    ConsoleManager.sendProviderList(
+      this.consoleConnections
+        .filter(((e) => e.userId === connection.userId))
+        .map((e) => e.socket),
+      providers.map((e) => ({
+        id: e._id.toHexString(),
+        name: e.name,
+        token: e.token,
+      })),
+    );
+
+    return {
+      id: provider._id.toHexString(),
+      token: provider.token,
+      name,
+    };
+  }
+
+  private async renameProvider(socket: SocketIO.Socket, id: string, name: string): Promise<ProviderMessage> {
+    const connection = this.consoleConnections.find(((e) => e.socket.id === socket.id));
+    if (connection === undefined) throw new Error('No connection of this socket');
+
+    const provider = await this.database.findProviderById(Database.getObjectIdFromHexString(id));
+    if (provider === null) throw new Error('Provider not found');
+    if (provider.userId.toHexString() !== connection.userId) throw new Error('User is not the owner of this provider');
+
+    const newProvider: Provider = {
+      ...provider,
+      name,
+    };
+
+    await this.database.replaceProvider(newProvider);
+    const providers = await this.database.findProvidersByUserId(provider.userId);
+
+    ConsoleManager.sendProviderList(
+      this.consoleConnections
+        .filter(((e) => e.userId === connection.userId))
+        .map((e) => e.socket),
+      providers.map((e) => ({
+        id: e._id.toHexString(),
+        name: e.name,
+        token: e.token,
+      })),
+    );
+
+    return {
+      id: newProvider._id.toHexString(),
+      token: newProvider.token,
+      name: newProvider.name,
+    };
+  }
+
+  private async resetProviderToken(socket: SocketIO.Socket, id: string): Promise<ProviderMessage> {
+    const connection = this.consoleConnections.find(((e) => e.socket.id === socket.id));
+    if (connection === undefined) throw new Error('No connection of this socket');
+
+    const provider = await this.database.findProviderById(Database.getObjectIdFromHexString(id));
+    if (provider === null) throw new Error('Provider not found');
+    if (provider.userId.toHexString() !== connection.userId) throw new Error('User is not the owner of this provider');
+
+    const newProvider: Provider = {
+      ...provider,
+      token: Console.generateToken(),
+    };
+
+    await this.database.replaceProvider(newProvider);
+    const providers = await this.database.findProvidersByUserId(provider.userId);
+
+    ConsoleManager.sendProviderList(
+      this.consoleConnections
+        .filter(((e) => e.userId === connection.userId))
+        .map((e) => e.socket),
+      providers.map((e) => ({
+        id: e._id.toHexString(),
+        name: e.name,
+        token: e.token,
+      })),
+    );
+
+    return {
+      id: newProvider._id.toHexString(),
+      token: newProvider.token,
+      name: newProvider.name,
+    };
+  }
+
+  private static generateToken(): string {
+    srs(((error, result) => {
+      if (error === null) return;
+      console.log(result);
+    }));
+
+    return srs({
+      alphanumeric: true,
+      length: 32,
+    });
   }
 }

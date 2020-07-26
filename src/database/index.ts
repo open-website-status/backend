@@ -25,9 +25,33 @@ export default class Database {
     this.db = this.client.db(dbName);
   }
 
-  public getProviderByToken(token: string): Promise<Provider | null> {
+  public findProviderByToken(token: string): Promise<Provider | null> {
     if (!this.db) throw new Error('Database not connected');
     return this.db.collection('providers').findOne({ token });
+  }
+
+  public findProviderById(id: ObjectId): Promise<Provider | null> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('providers').findOne({ _id: id });
+  }
+
+  public async findProvidersByUserId(userId: ObjectId): Promise<Provider[]> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('providers').find<Provider>({
+      userId,
+    }).toArray();
+  }
+
+  public async createProvider(provider: Provider): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+    await this.db.collection('providers').insertOne(provider);
+  }
+
+  public async replaceProvider(provider: Provider): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+    await this.db.collection('providers').replaceOne({
+      _id: provider._id,
+    }, provider);
   }
 
   public getAPIClientByToken(token: string): Promise<APIClient | null> {
