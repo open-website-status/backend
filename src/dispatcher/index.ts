@@ -120,7 +120,7 @@ export default class Dispatcher {
   }
 
   private async getAndVerifyJob(providerConnection: ProviderConnection, jobId: string): Promise<Job> {
-    const job = await this.database.getJobById(Database.getObjectIdFromHexString(jobId));
+    const job = await this.database.findJobById(Database.getObjectIdFromHexString(jobId));
     if (!job) {
       throw new Error('Job not found');
     }
@@ -212,7 +212,7 @@ export default class Dispatcher {
 
   // TODO: Implement throttling
   private async dispatchAPIQuery(data: APIQueryMessage): Promise<QueryMessage> {
-    const apiClient = await this.database.getAPIClientByToken(data.token);
+    const apiClient = await this.database.findAPIClientByToken(data.token);
     if (apiClient === null) {
       throw new Error('Invalid token');
     }
@@ -278,7 +278,7 @@ export default class Dispatcher {
   }
 
   private async getQuery(queryId: string): Promise<QueryMessage> {
-    const query = await this.database.getQueryById(Database.getObjectIdFromHexString(queryId));
+    const query = await this.database.findQueryById(Database.getObjectIdFromHexString(queryId));
     if (query === null) throw new Error('Query not found');
     return {
       id: queryId,

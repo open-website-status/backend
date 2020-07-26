@@ -9,6 +9,12 @@ export type RenameProviderFunction = (socket: SocketIO.Socket, id: string, name:
 
 export type ResetProviderTokenFunction = (socket: SocketIO.Socket, id: string) => Promise<ProviderMessage>;
 
+export type CreateAPIClientFunction = (socket: SocketIO.Socket, data: CreateProviderMessage) => Promise<APIClientMessage>;
+
+export type RenameAPIClientFunction = (socket: SocketIO.Socket, id: string, name: string) => Promise<APIClientMessage>;
+
+export type ResetAPIClientTokenFunction = (socket: SocketIO.Socket, id: string) => Promise<APIClientMessage>;
+
 export interface ConsoleConnection {
   socket: SocketIO.Socket,
   firebaseUid: string,
@@ -39,5 +45,32 @@ export const RenameProviderMessage = t.type({
 });
 
 export const ResetProviderTokenMessage = t.type({
+  id: t.string,
+});
+
+export interface APIClientMessage {
+  id: string;
+  name: string;
+  token: string;
+  creationTimestamp: string;
+}
+
+export interface APIClientListMessage {
+  data: APIClientMessage[];
+}
+
+export const CreateAPIClientMessage = t.type({
+  reCaptchaResponse: t.string,
+  name: t.string,
+});
+
+export type CreateAPIClientMessage = t.TypeOf<typeof CreateAPIClientMessage>;
+
+export const RenameAPIClientMessage = t.type({
+  id: t.string,
+  name: t.string,
+});
+
+export const ResetAPIClientTokenMessage = t.type({
   id: t.string,
 });

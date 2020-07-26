@@ -25,6 +25,8 @@ export default class Database {
     this.db = this.client.db(dbName);
   }
 
+  // Provider
+
   public findProviderByToken(token: string): Promise<Provider | null> {
     if (!this.db) throw new Error('Database not connected');
     return this.db.collection('providers').findOne({ token });
@@ -54,12 +56,40 @@ export default class Database {
     }, provider);
   }
 
-  public getAPIClientByToken(token: string): Promise<APIClient | null> {
+  // API client
+
+  public findAPIClientByToken(token: string): Promise<APIClient | null> {
     if (!this.db) throw new Error('Database not connected');
     return this.db.collection('api-clients').findOne({ token });
   }
 
-  public getQueryById(id: ObjectId): Promise<Query | null> {
+  public findAPIClientById(id: ObjectId): Promise<APIClient | null> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('api-clients').findOne({ _id: id });
+  }
+
+  public findAPIClientByUserId(userId: ObjectId): Promise<APIClient[]> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('api-clients').find<APIClient>({
+      userId,
+    }).toArray();
+  }
+
+  public async createAPIClient(apiClient: APIClient): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+    await this.db.collection('api-clients').insertOne(apiClient);
+  }
+
+  public async replaceAPIClient(apiClient: APIClient): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+    await this.db.collection('api-clients').replaceOne({
+      _id: apiClient._id,
+    }, apiClient);
+  }
+
+  // Query
+
+  public findQueryById(id: ObjectId): Promise<Query | null> {
     if (!this.db) throw new Error('Database not connected');
     return this.db.collection('queries').findOne({ _id: id });
   }
@@ -69,7 +99,9 @@ export default class Database {
     await this.db.collection('queries').insertOne(query);
   }
 
-  public getJobById(id: ObjectId): Promise<Job | null> {
+  // Job
+
+  public findJobById(id: ObjectId): Promise<Job | null> {
     if (!this.db) throw new Error('Database not connected');
     return this.db.collection('jobs').findOne({ _id: id });
   }
@@ -100,6 +132,8 @@ export default class Database {
     });
   }
 
+  // User
+
   public async findUserByFirebaseUid(uid: string): Promise<User | null> {
     if (!this.db) throw new Error('Database not connected');
     return this.db.collection('users').findOne({ firebaseUid: uid });
@@ -109,6 +143,8 @@ export default class Database {
     if (!this.db) throw new Error('Database not connected');
     await this.db.collection('users').insertOne(user);
   }
+
+  // Utility methods
 
   public static getObjectIdFromHexString(string: string): ObjectId {
     return new ObjectId(string);

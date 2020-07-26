@@ -4,13 +4,23 @@ import * as t from 'io-ts';
 import SocketIO from 'socket.io';
 import { EventEmitter } from 'typed-event-emitter';
 import {
+  APIClientListMessage,
+  APIClientMessage,
+  CreateAPIClientFunction,
+  CreateAPIClientMessage,
   CreateProviderFunction,
   CreateProviderMessage,
   InitUserFunction,
   ProviderListMessage,
   ProviderMessage,
+  RenameAPIClientFunction,
+  RenameAPIClientMessage,
   RenameProviderFunction,
-  RenameProviderMessage, ResetProviderTokenFunction, ResetProviderTokenMessage,
+  RenameProviderMessage,
+  ResetAPIClientTokenFunction,
+  ResetAPIClientTokenMessage,
+  ResetProviderTokenFunction,
+  ResetProviderTokenMessage,
 } from '../console/types';
 import { IONext } from '../dispatcher/types';
 import { safeDataCallback, safeEmptyCallback } from '../utils/safe-socket-callback';
@@ -32,12 +42,21 @@ export default class ConsoleManager extends EventEmitter {
 
   private readonly resetProviderToken: ResetProviderTokenFunction;
 
+  private readonly createAPIClient: CreateAPIClientFunction;
+
+  private readonly renameAPIClient: RenameAPIClientFunction;
+
+  private readonly resetAPIClientToken: ResetAPIClientTokenFunction;
+
   public constructor(
     socketManager: SocketManager,
     initUserFunction: InitUserFunction,
     createProviderFunction: CreateProviderFunction,
     renameProviderFunction: RenameProviderFunction,
     resetProviderTokenFunction: ResetProviderTokenFunction,
+    createAPIClientFunction: CreateAPIClientFunction,
+    renameAPIClientFunction: RenameAPIClientFunction,
+    resetAPIClientTokenFunction: ResetAPIClientTokenFunction,
   ) {
     super();
 
@@ -45,6 +64,9 @@ export default class ConsoleManager extends EventEmitter {
     this.createProvider = createProviderFunction;
     this.renameProvider = renameProviderFunction;
     this.resetProviderToken = resetProviderTokenFunction;
+    this.createAPIClient = createAPIClientFunction;
+    this.renameAPIClient = renameAPIClientFunction;
+    this.resetAPIClientToken = resetAPIClientTokenFunction;
 
     this.socketManager = socketManager;
 
@@ -104,6 +126,51 @@ export default class ConsoleManager extends EventEmitter {
         ));
       });
 
+      socket.on('create-api-client', (data: unknown, callback: UnsafeCallback<AcknowledgementCallbackData<APIClientMessage>>) => {
+        pipe(CreateAPIClientMessage.decode(data), fold(
+          () => safeEmptyCallback(callback, 'Request does not match schema'),
+          async (parsedData) => {
+            try {
+              const apiClientMessage = await this.createAPIClient(socket, parsedData);
+              safeDataCallback(callback, null, apiClientMessage);
+            } catch (error) {
+              console.error(error);
+              safeDataCallback(callback, error instanceof Error ? error.message : 'Failed to create API client', null);
+            }
+          },
+        ));
+      });
+
+      socket.on('rename-api-client', (data: unknown, callback: UnsafeCallback<AcknowledgementCallbackData<APIClientMessage>>) => {
+        pipe(RenameAPIClientMessage.decode(data), fold(
+          () => safeEmptyCallback(callback, 'Request does not match schema'),
+          async (parsedData) => {
+            try {
+              const apiClientMessage = await this.renameAPIClient(socket, parsedData.id, parsedData.name);
+              safeDataCallback(callback, null, apiClientMessage);
+            } catch (error) {
+              console.error(error);
+              safeDataCallback(callback, error instanceof Error ? error.message : 'Failed to rename API client', null);
+            }
+          },
+        ));
+      });
+
+      socket.on('reset-api-client-token', (data: unknown, callback: UnsafeCallback<AcknowledgementCallbackData<APIClientMessage>>) => {
+        pipe(ResetAPIClientTokenMessage.decode(data), fold(
+          () => safeEmptyCallback(callback, 'Request does not match schema'),
+          async (parsedData) => {
+            try {
+              const apiClientMessage = await this.resetAPIClientToken(socket, parsedData.id);
+              safeDataCallback(callback, null, apiClientMessage);
+            } catch (error) {
+              console.error(error);
+              safeDataCallback(callback, error instanceof Error ? error.message : 'Failed to reset API client token', null);
+            }
+          },
+        ));
+      });
+
       socket.on('disconnect', () => {
         this.emit(this.onDisconnect, socket);
       });
@@ -133,6 +200,15 @@ export default class ConsoleManager extends EventEmitter {
     };
     sockets.forEach((socket) => {
       socket.emit('provider-list', message);
+    });
+  }
+
+  public static sendAPIClientList(sockets: SocketIO.Socket[], apiClients: APIClientMessage[]): void {
+    const message: APIClientListMessage = {
+      data: apiClients,
+    };
+    sockets.forEach((socket) => {
+      socket.emit('api-client-list', message);
     });
   }
 }
