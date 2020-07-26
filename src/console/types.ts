@@ -19,6 +19,7 @@ export interface ProviderMessage {
   id: string;
   name: string;
   token: string;
+  creationTimestamp: string;
 }
 
 export interface ProviderListMessage {

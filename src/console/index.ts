@@ -59,6 +59,7 @@ export default class Console {
       id: provider._id.toHexString(),
       name: provider.name,
       token: provider.token,
+      creationTimestamp: provider.creationTimestamp.toISOString(),
     }));
     ConsoleManager.sendProviderList(sockets, messageProviders);
   }
@@ -79,6 +80,7 @@ export default class Console {
     const provider: Provider = {
       _id: Database.generateObjectId(),
       token: Console.generateToken(),
+      creationTimestamp: new Date(),
       name: data.name,
       userId,
     };
@@ -93,6 +95,7 @@ export default class Console {
         id: e._id.toHexString(),
         name: e.name,
         token: e.token,
+        creationTimestamp: e.creationTimestamp.toISOString(),
       })),
     );
 
@@ -100,6 +103,7 @@ export default class Console {
       id: provider._id.toHexString(),
       token: provider.token,
       name: provider.name,
+      creationTimestamp: provider.creationTimestamp.toISOString(),
     };
   }
 
@@ -127,6 +131,7 @@ export default class Console {
         id: e._id.toHexString(),
         name: e.name,
         token: e.token,
+        creationTimestamp: e.creationTimestamp.toISOString(),
       })),
     );
 
@@ -134,6 +139,7 @@ export default class Console {
       id: newProvider._id.toHexString(),
       token: newProvider.token,
       name: newProvider.name,
+      creationTimestamp: newProvider.creationTimestamp.toISOString(),
     };
   }
 
@@ -161,6 +167,7 @@ export default class Console {
         id: e._id.toHexString(),
         name: e.name,
         token: e.token,
+        creationTimestamp: e.creationTimestamp.toISOString(),
       })),
     );
 
@@ -168,6 +175,7 @@ export default class Console {
       id: newProvider._id.toHexString(),
       token: newProvider.token,
       name: newProvider.name,
+      creationTimestamp: newProvider.creationTimestamp.toISOString(),
     };
   }
 

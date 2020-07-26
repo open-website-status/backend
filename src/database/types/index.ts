@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 export interface Provider {
   _id: ObjectId;
   userId: ObjectId;
+  creationTimestamp: Date;
   token: string;
   name: string;
 }
@@ -35,7 +36,6 @@ export interface APIClient {
   userId: ObjectId;
   creationTimestamp: Date;
   token: string;
-  hourlyLimit: null;
   name: string;
 }
 
