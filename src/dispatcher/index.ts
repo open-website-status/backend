@@ -1,8 +1,8 @@
+import { ObjectId } from 'mongodb';
 import SocketIO from 'socket.io';
 import Database from '../database';
 import {
-  BaseJob,
-  DispatchedJob, Job, JobResult, Query,
+  BaseJob, DispatchedJob, Job, JobResult, Query,
 } from '../database/types';
 import SocketManager from '../socket-manager';
 import APIManager from '../socket-manager/api-manager';
@@ -40,8 +40,8 @@ export default class Dispatcher {
 
     this.apiManager = new APIManager(
       this.socketManager,
-      (data: APIQueryMessage) => this.dispatchAPIQuery(data),
-      (data: WebsiteQueryMessage) => this.dispatchWebsiteQuery(data),
+      (data: APIQueryMessage, id: ObjectId) => this.dispatchAPIQuery(data, id),
+      (data: WebsiteQueryMessage, id: ObjectId) => this.dispatchWebsiteQuery(data, id),
       (queryId: string) => this.getQuery(queryId),
     );
   }
@@ -91,6 +91,7 @@ export default class Dispatcher {
               regionCode: job.regionCode,
               ispName: job.ispName,
             });
+            await this.sendJobList(job.queryId);
           } else if (job.jobState === 'dispatched') {
             await this.modifyJob({
               _id: job._id,
@@ -103,6 +104,7 @@ export default class Dispatcher {
               regionCode: job.regionCode,
               ispName: job.ispName,
             });
+            await this.sendJobList(job.queryId);
           }
         }));
       } catch (error) {
@@ -146,6 +148,7 @@ export default class Dispatcher {
       regionCode: job.regionCode,
       ispName: job.ispName,
     });
+    await this.sendJobList(job.queryId);
   }
 
   private async rejectJob(socket: SocketIO.Socket, jobId: string): Promise<void> {
@@ -163,6 +166,7 @@ export default class Dispatcher {
       regionCode: job.regionCode,
       ispName: job.ispName,
     });
+    await this.sendJobList(job.queryId);
   }
 
   private async cancelJob(socket: SocketIO.Socket, jobId: string): Promise<void> {
@@ -185,6 +189,7 @@ export default class Dispatcher {
       regionCode: job.regionCode,
       ispName: job.ispName,
     });
+    await this.sendJobList(job.queryId);
   }
 
   private async completeJob(socket: SocketIO.Socket, jobId: string, result: JobResult): Promise<void> {
@@ -208,17 +213,18 @@ export default class Dispatcher {
       regionCode: job.regionCode,
       ispName: job.ispName,
     });
+    await this.sendJobList(job.queryId);
   }
 
   // TODO: Implement throttling
-  private async dispatchAPIQuery(data: APIQueryMessage): Promise<QueryMessage> {
+  private async dispatchAPIQuery(data: APIQueryMessage, id: ObjectId): Promise<QueryMessage> {
     const apiClient = await this.database.findAPIClientByToken(data.token);
     if (apiClient === null) {
       throw new Error('Invalid token');
     }
 
     return this.dispatchQuery({
-      _id: Database.generateObjectId(),
+      _id: id,
       hostname: data.hostname,
       pathname: data.pathname,
       port: data.port,
@@ -229,7 +235,7 @@ export default class Dispatcher {
     });
   }
 
-  private async dispatchWebsiteQuery(data: WebsiteQueryMessage): Promise<QueryMessage> {
+  private async dispatchWebsiteQuery(data: WebsiteQueryMessage, id: ObjectId): Promise<QueryMessage> {
     const secret = process.env.RECAPTCHA_SECRET_WEBSITE;
     if (secret === undefined) {
       throw new Error('Environment variable RECAPTCHA_SECRET_WEBSITE not provided');
@@ -238,7 +244,7 @@ export default class Dispatcher {
     if (!captchaValid) throw new Error('Captcha verification failed');
 
     return this.dispatchQuery({
-      _id: Database.generateObjectId(),
+      _id: id,
       hostname: data.hostname,
       pathname: data.pathname,
       port: data.port,
@@ -251,11 +257,9 @@ export default class Dispatcher {
 
   private async dispatchQuery(query: Query): Promise<QueryMessage> {
     await this.database.createQuery(query);
-
-    await Promise.all(this.connectedProviders.map(async (providerConnection): Promise<void> => {
-      const jobId = Database.generateObjectId();
-      const job: BaseJob & DispatchedJob = {
-        _id: jobId,
+    const jobsWithConnections = this.connectedProviders.map((providerConnection) => {
+      const job: BaseJob & DispatchedJob = ({
+        _id: Database.generateObjectId(),
         providerId: providerConnection.provider._id,
         jobState: 'dispatched',
         queryId: query._id,
@@ -263,11 +267,17 @@ export default class Dispatcher {
         countryCode: providerConnection.countryCode,
         regionCode: providerConnection.regionCode,
         ispName: providerConnection.ispName,
+      });
+      return {
+        job,
+        connection: providerConnection,
       };
-
+    });
+    await Promise.all(jobsWithConnections.map(async ({ job, connection }): Promise<void> => {
       await this.createJob(job);
-      ProviderManager.dispatchJob(providerConnection.socket, query, jobId.toHexString());
+      ProviderManager.dispatchJob(connection.socket, query, job._id.toHexString());
     }));
+    this.apiManager.emitJobList(jobsWithConnections.map(({ job }) => job), query._id.toHexString());
 
     return {
       id: query._id.toHexString(),
@@ -307,5 +317,10 @@ export default class Dispatcher {
   private async removeJob(jobId: string, queryId: string): Promise<void> {
     await this.database.removeJob(Database.getObjectIdFromHexString(jobId));
     this.apiManager.emitJobDelete(jobId, queryId);
+  }
+
+  private async sendJobList(queryId: ObjectId): Promise<void> {
+    const jobs = await this.database.findJobsByQueryId(queryId);
+    this.apiManager.emitJobList(jobs, queryId.toHexString());
   }
 }

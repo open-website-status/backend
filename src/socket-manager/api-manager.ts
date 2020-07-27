@@ -1,6 +1,7 @@
 import { fold } from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/pipeable';
 import SocketIO from 'socket.io';
+import Database from '../database';
 import { Job } from '../database/types';
 import {
   APIQueryMessage, BaseJobMessage,
@@ -8,8 +9,8 @@ import {
   DispatchWebsiteQueryFunction,
   GetQueryFunction,
   GetQueryMessage,
-  JobCreateAndChangeMessage,
-  JobDeleteMessage,
+  JobMessage,
+  JobDeleteMessage, JobListMessage,
   QueryMessage,
   WebsiteQueryMessage,
 } from '../dispatcher/types';
@@ -47,7 +48,7 @@ export default class APIManager {
       );
 
       socket.on(
-        'query',
+        'query-api',
         (data, callback: AcknowledgementCallbackData<QueryMessage>) => this.onAPIQuery(socket, data, callback),
       );
 
@@ -63,10 +64,11 @@ export default class APIManager {
       () => safeDataCallback(callback, 'Request does not match schema', null),
       async (parsedData): Promise<void> => {
         try {
-          const query = await this.dispatchWebsiteQuery(parsedData);
+          const id = Database.generateObjectId();
           if (parsedData.subscribe) {
-            socket.join(`queries/${query.id}`);
+            socket.join(`queries/${id.toHexString()}`);
           }
+          const query = await this.dispatchWebsiteQuery(parsedData, id);
           safeDataCallback(callback, null, query);
         } catch (error) {
           console.error(error);
@@ -81,10 +83,11 @@ export default class APIManager {
       () => safeDataCallback(callback, 'Request does not match schema', null),
       async (parsedData): Promise<void> => {
         try {
-          const query = await this.dispatchAPIQuery(parsedData);
+          const id = Database.generateObjectId();
           if (parsedData.subscribe) {
-            socket.join(`queries/${query.id}`);
+            socket.join(`queries/${id.toHexString()}`);
           }
+          const query = await this.dispatchAPIQuery(parsedData, id);
           safeDataCallback(callback, null, query);
         } catch (error) {
           console.error(error);
@@ -100,6 +103,9 @@ export default class APIManager {
       async (parsedData): Promise<void> => {
         try {
           const query = await this.getQuery(parsedData.queryId);
+          if (parsedData.subscribe) {
+            socket.join(`query/${parsedData.queryId}`);
+          }
           safeDataCallback(callback, null, query);
         } catch (error) {
           console.error(error);
@@ -109,11 +115,11 @@ export default class APIManager {
     ));
   }
 
-  private static getJobMessage(job: Job): JobCreateAndChangeMessage {
+  private static getJobMessage(job: Job): JobMessage {
     const message: Omit<BaseJobMessage, 'jobState'> = {
       id: job._id.toHexString(),
       queryId: job.queryId.toHexString(),
-      dispatchTimestamp: job.dispatchTimestamp,
+      dispatchTimestamp: job.dispatchTimestamp.toISOString(),
       countryCode: job.countryCode,
       regionCode: job.regionCode,
       ispName: job.ispName,
@@ -123,30 +129,30 @@ export default class APIManager {
       return {
         ...message,
         jobState: 'accepted',
-        acceptTimestamp: job.acceptTimestamp,
+        acceptTimestamp: job.acceptTimestamp.toISOString(),
       };
     }
     if (job.jobState === 'rejected') {
       return {
         ...message,
         jobState: 'rejected',
-        rejectTimestamp: job.rejectTimestamp,
+        rejectTimestamp: job.rejectTimestamp.toISOString(),
       };
     }
     if (job.jobState === 'canceled') {
       return {
         ...message,
         jobState: 'canceled',
-        acceptTimestamp: job.acceptTimestamp,
-        cancelTimestamp: job.cancelTimestamp,
+        acceptTimestamp: job.acceptTimestamp.toISOString(),
+        cancelTimestamp: job.cancelTimestamp.toISOString(),
       };
     }
     if (job.jobState === 'completed') {
       return {
         ...message,
         jobState: 'completed',
-        acceptTimestamp: job.acceptTimestamp,
-        completeTimestamp: job.completeTimestamp,
+        acceptTimestamp: job.acceptTimestamp.toISOString(),
+        completeTimestamp: job.completeTimestamp.toISOString(),
         result: job.result,
       };
     } // if (job.jobState === 'dispatched')
@@ -170,10 +176,18 @@ export default class APIManager {
 
   public emitJobDelete(jobId: string, queryId: string): void {
     const message: JobDeleteMessage = {
-      id: jobId,
+      jobId,
       queryId,
     };
     this.socketServer.in(`queries/${queryId}`).emit('job-delete', message);
     this.socketServer.in(`jobs/${jobId}`).emit('job-delete', message);
+  }
+
+  public emitJobList(jobs: Job[], queryId: string): void {
+    const message: JobListMessage = {
+      jobs: jobs.map((job) => APIManager.getJobMessage(job)),
+      queryId,
+    };
+    this.socketServer.in(`queries/${queryId}`).emit('job-list', message);
   }
 }

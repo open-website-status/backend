@@ -113,6 +113,13 @@ export default class Database {
     }).toArray();
   }
 
+  public findJobsByQueryId(id: ObjectId): Promise<Job[]> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('jobs').find<Job>({
+      queryId: id,
+    }).toArray();
+  }
+
   public async createJob(job: Job): Promise<void> {
     if (!this.db) throw new Error('Database not connected');
     await this.db.collection('jobs').insertOne(job);

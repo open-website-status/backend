@@ -1,4 +1,5 @@
 import * as t from 'io-ts';
+import { ObjectId } from 'mongodb';
 import SocketIO from 'socket.io';
 import { JobResult, Provider } from '../../database/types';
 
@@ -48,6 +49,7 @@ export type WebsiteQueryMessage = t.TypeOf<typeof WebsiteQueryMessage>;
 
 export const GetQueryMessage = t.type({
   queryId: t.string,
+  subscribe: t.boolean,
 });
 
 export type GetQueryMessage = t.TypeOf<typeof GetQueryMessage>;
@@ -89,9 +91,9 @@ export type CancelJobFunction = (socket: SocketIO.Socket, jobId: string) => Prom
 
 export type CompleteJobFunction = (socket: SocketIO.Socket, jobId: string, result: JobResult) => Promise<void>;
 
-export type DispatchAPIQueryFunction = (data: APIQueryMessage) => Promise<QueryMessage>;
+export type DispatchAPIQueryFunction = (data: APIQueryMessage, id: ObjectId) => Promise<QueryMessage>;
 
-export type DispatchWebsiteQueryFunction = (data: WebsiteQueryMessage) => Promise<QueryMessage>;
+export type DispatchWebsiteQueryFunction = (data: WebsiteQueryMessage, id: ObjectId) => Promise<QueryMessage>;
 
 export type GetQueryFunction = (queryId: string) => Promise<QueryMessage>;
 
