@@ -1,10 +1,6 @@
 import got from 'got';
 
-export default async function verifyReCaptcha(captchaResponse: string): Promise<boolean> {
-  const secret = process.env.RECAPTCHA_SECRET;
-  if (secret === undefined) {
-    throw new Error('Environment variable RECAPTCHA_SECRET not provided');
-  }
+export default async function verifyReCaptcha(captchaResponse: string, secret: string): Promise<boolean> {
   const response = await got.post<{
     success: boolean,
     challenge_ts: string,

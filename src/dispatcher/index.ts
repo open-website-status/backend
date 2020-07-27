@@ -230,8 +230,11 @@ export default class Dispatcher {
   }
 
   private async dispatchWebsiteQuery(data: WebsiteQueryMessage): Promise<QueryMessage> {
-    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse);
-
+    const secret = process.env.RECAPTCHA_SECRET_WEBSITE;
+    if (secret === undefined) {
+      throw new Error('Environment variable RECAPTCHA_SECRET_WEBSITE not provided');
+    }
+    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse, secret);
     if (!captchaValid) throw new Error('Captcha verification failed');
 
     return this.dispatchQuery({

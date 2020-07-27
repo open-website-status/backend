@@ -64,6 +64,9 @@ export default class APIManager {
       async (parsedData): Promise<void> => {
         try {
           const query = await this.dispatchWebsiteQuery(parsedData);
+          if (parsedData.subscribe) {
+            socket.join(`queries/${query.id}`);
+          }
           safeDataCallback(callback, null, query);
         } catch (error) {
           console.error(error);
@@ -79,6 +82,9 @@ export default class APIManager {
       async (parsedData): Promise<void> => {
         try {
           const query = await this.dispatchAPIQuery(parsedData);
+          if (parsedData.subscribe) {
+            socket.join(`queries/${query.id}`);
+          }
           safeDataCallback(callback, null, query);
         } catch (error) {
           console.error(error);
@@ -167,7 +173,7 @@ export default class APIManager {
       id: jobId,
       queryId,
     };
-    this.socketServer.in(`queries/${jobId}`).emit('job-delete', message);
-    this.socketServer.in(`jobs/${queryId}`).emit('job-delete', message);
+    this.socketServer.in(`queries/${queryId}`).emit('job-delete', message);
+    this.socketServer.in(`jobs/${jobId}`).emit('job-delete', message);
   }
 }

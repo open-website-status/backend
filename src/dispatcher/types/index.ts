@@ -29,6 +29,7 @@ export const APIQueryMessage = t.type({
   port: t.union([t.number, t.undefined]),
   pathname: t.string,
   search: t.string,
+  subscribe: t.boolean,
 });
 
 export type APIQueryMessage = t.TypeOf<typeof APIQueryMessage>;
@@ -40,6 +41,7 @@ export const WebsiteQueryMessage = t.type({
   pathname: t.string,
   search: t.string,
   reCaptchaResponse: t.string,
+  subscribe: t.boolean,
 });
 
 export type WebsiteQueryMessage = t.TypeOf<typeof WebsiteQueryMessage>;

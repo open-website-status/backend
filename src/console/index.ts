@@ -118,7 +118,11 @@ export default class Console {
   private async createProvider(socket: SocketIO.Socket, data: CreateProviderMessage): Promise<ProviderMessage> {
     const connection = this.requireConnection(socket.id);
 
-    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse);
+    const secret = process.env.RECAPTCHA_SECRET_CONSOLE;
+    if (secret === undefined) {
+      throw new Error('Environment variable RECAPTCHA_SECRET_CONSOLE not provided');
+    }
+    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse, secret);
     if (!captchaValid) throw new Error('Captcha verification failed');
 
     const userId = Database.getObjectIdFromHexString(connection.userId);
@@ -182,7 +186,11 @@ export default class Console {
   private async createAPIClient(socket: SocketIO.Socket, data: CreateAPIClientMessage): Promise<APIClientMessage> {
     const connection = this.requireConnection(socket.id);
 
-    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse);
+    const secret = process.env.RECAPTCHA_SECRET_CONSOLE;
+    if (secret === undefined) {
+      throw new Error('Environment variable RECAPTCHA_SECRET_CONSOLE not provided');
+    }
+    const captchaValid = await verifyReCaptcha(data.reCaptchaResponse, secret);
     if (!captchaValid) throw new Error('Captcha verification failed');
 
     const userId = Database.getObjectIdFromHexString(connection.userId);
