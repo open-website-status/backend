@@ -12,7 +12,7 @@ import {
   JobMessage,
   JobDeleteMessage, JobListMessage,
   QueryMessage,
-  WebsiteQueryMessage, ConnectedProvidersCountMessage, GetConnectedProvidersCountFunction,
+  WebsiteQueryMessage, ConnectedProvidersCountMessage, GetConnectedProvidersCountFunction, GetJobsFunction,
 } from '../dispatcher/types';
 import { safeDataCallback } from '../utils/safe-socket-callback';
 import { AcknowledgementCallbackData, UnsafeCallback } from './types';
@@ -29,17 +29,21 @@ export default class APIManager {
 
   private readonly getConnectedProvidersCount: GetConnectedProvidersCountFunction;
 
+  private readonly getJobs: GetJobsFunction;
+
   public constructor(
     socketManager: SocketManager,
     dispatchAPIQueryFunction: DispatchAPIQueryFunction,
     dispatchWebsiteQueryFunction: DispatchWebsiteQueryFunction,
     getQueryFunction: GetQueryFunction,
     getConnectedProvidersCountFunction: GetConnectedProvidersCountFunction,
+    getJobsFunction: GetJobsFunction,
   ) {
     this.dispatchAPIQuery = dispatchAPIQueryFunction;
     this.dispatchWebsiteQuery = dispatchWebsiteQueryFunction;
     this.getQuery = getQueryFunction;
     this.getConnectedProvidersCount = getConnectedProvidersCountFunction;
+    this.getJobs = getJobsFunction;
 
     this.socketServer = SocketIO(socketManager.httpServer, {
       path: '/api-socket',
@@ -114,6 +118,12 @@ export default class APIManager {
           if (parsedData.subscribe) {
             socket.join(`query/${parsedData.queryId}`);
           }
+          const jobs = await this.getJobs(parsedData.queryId);
+          const jobListMessage: JobListMessage = {
+            jobs: jobs.map((job) => APIManager.getJobMessage(job)),
+            queryId: parsedData.queryId,
+          };
+          socket.emit('job-list', jobListMessage);
           safeDataCallback(callback, null, query);
         } catch (error) {
           console.error(error);

@@ -44,11 +44,16 @@ export default class Dispatcher {
       (data: WebsiteQueryMessage, id: ObjectId) => this.dispatchWebsiteQuery(data, id),
       (queryId: string) => this.getQuery(queryId),
       (() => this.getConnectedProvidersCount()),
+      ((queryId) => this.getJobs(queryId)),
     );
   }
 
-  public getConnectedProvidersCount(): number {
+  private getConnectedProvidersCount(): number {
     return this.connectedProviders.length;
+  }
+
+  private getJobs(queryId: string): Promise<Job[]> {
+    return this.database.findJobsByQueryId(Database.getObjectIdFromHexString(queryId));
   }
 
   private async initProvider(socket: SocketIO.Socket, token: string): Promise<void> {

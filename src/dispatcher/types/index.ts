@@ -1,7 +1,7 @@
 import * as t from 'io-ts';
 import { ObjectId } from 'mongodb';
 import SocketIO from 'socket.io';
-import { JobResult, Provider } from '../../database/types';
+import { Job, JobResult, Provider } from '../../database/types';
 
 export * from './jobs';
 
@@ -102,5 +102,7 @@ export type DispatchWebsiteQueryFunction = (data: WebsiteQueryMessage, id: Objec
 export type GetQueryFunction = (queryId: string) => Promise<QueryMessage>;
 
 export type GetConnectedProvidersCountFunction = () => number;
+
+export type GetJobsFunction = (queryId: string) => Promise<Job[]>;
 
 export type IONext = (err?: unknown) => void;
