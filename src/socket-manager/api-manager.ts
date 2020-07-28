@@ -61,7 +61,9 @@ export default class APIManager {
         (data, callback: AcknowledgementCallbackData<QueryMessage>) => this.onGetQuery(socket, data, callback),
       );
 
-      socket.emit('connected-providers-count', this.getConnectedProvidersCount());
+      socket.emit('connected-providers-count', {
+        count: this.getConnectedProvidersCount(),
+      });
     });
   }
 
