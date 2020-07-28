@@ -2,12 +2,14 @@
   "name": "@open-website-status/backend",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint -c .eslintrc.json --ext .ts src/**",
     "lint:fix": "eslint -c .eslintrc.json --ext .ts src/** --fix",
-    "start": "ts-node src/index.ts"
+    "start:ts-node": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node ."
   },
   "author": "Dominik Korsa <dominik.korsa@gmail.com> (https://github.com/dominik-korsa)",
   "license": "MIT",
