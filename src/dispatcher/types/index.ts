@@ -81,6 +81,10 @@ export const ProviderJobCompleteMessage = t.type({
   result: JobResult,
 });
 
+export interface ConnectedProvidersCountMessage {
+  count: number,
+}
+
 export type ProviderInitFunction = (socket: SocketIO.Socket, token: string) => Promise<void>;
 
 export type AcceptJobFunction = (socket: SocketIO.Socket, jobId: string) => Promise<void>;
@@ -96,5 +100,7 @@ export type DispatchAPIQueryFunction = (data: APIQueryMessage, id: ObjectId) => 
 export type DispatchWebsiteQueryFunction = (data: WebsiteQueryMessage, id: ObjectId) => Promise<QueryMessage>;
 
 export type GetQueryFunction = (queryId: string) => Promise<QueryMessage>;
+
+export type GetConnectedProvidersCountFunction = () => number;
 
 export type IONext = (err?: unknown) => void;

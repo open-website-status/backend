@@ -12,7 +12,7 @@ import {
   JobMessage,
   JobDeleteMessage, JobListMessage,
   QueryMessage,
-  WebsiteQueryMessage,
+  WebsiteQueryMessage, ConnectedProvidersCountMessage, GetConnectedProvidersCountFunction,
 } from '../dispatcher/types';
 import { safeDataCallback } from '../utils/safe-socket-callback';
 import { AcknowledgementCallbackData, UnsafeCallback } from './types';
@@ -27,15 +27,19 @@ export default class APIManager {
 
   private readonly getQuery: GetQueryFunction;
 
+  private readonly getConnectedProvidersCount: GetConnectedProvidersCountFunction;
+
   public constructor(
     socketManager: SocketManager,
     dispatchAPIQueryFunction: DispatchAPIQueryFunction,
     dispatchWebsiteQueryFunction: DispatchWebsiteQueryFunction,
     getQueryFunction: GetQueryFunction,
+    getConnectedProvidersCountFunction: GetConnectedProvidersCountFunction,
   ) {
     this.dispatchAPIQuery = dispatchAPIQueryFunction;
     this.dispatchWebsiteQuery = dispatchWebsiteQueryFunction;
     this.getQuery = getQueryFunction;
+    this.getConnectedProvidersCount = getConnectedProvidersCountFunction;
 
     this.socketServer = SocketIO(socketManager.httpServer, {
       path: '/api-socket',
@@ -56,6 +60,8 @@ export default class APIManager {
         'get-query',
         (data, callback: AcknowledgementCallbackData<QueryMessage>) => this.onGetQuery(socket, data, callback),
       );
+
+      socket.emit('connected-providers-count', this.getConnectedProvidersCount());
     });
   }
 
@@ -189,5 +195,13 @@ export default class APIManager {
       queryId,
     };
     this.socketServer.in(`queries/${queryId}`).emit('job-list', message);
+  }
+
+  public emitConnectedProvidersCount(count: number): void {
+    const message: ConnectedProvidersCountMessage = {
+      count,
+    };
+
+    this.socketServer.emit('connected-providers-count', message);
   }
 }

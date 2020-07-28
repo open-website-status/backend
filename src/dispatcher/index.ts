@@ -43,7 +43,12 @@ export default class Dispatcher {
       (data: APIQueryMessage, id: ObjectId) => this.dispatchAPIQuery(data, id),
       (data: WebsiteQueryMessage, id: ObjectId) => this.dispatchWebsiteQuery(data, id),
       (queryId: string) => this.getQuery(queryId),
+      (() => this.getConnectedProvidersCount()),
     );
+  }
+
+  public getConnectedProvidersCount(): number {
+    return this.connectedProviders.length;
   }
 
   private async initProvider(socket: SocketIO.Socket, token: string): Promise<void> {
@@ -68,12 +73,15 @@ export default class Dispatcher {
 
     this.connectedProviders.push(providerConnection);
 
+    this.apiManager.emitConnectedProvidersCount(this.getConnectedProvidersCount());
+
     console.log(`Provider "${provider.name}" initialized`);
   }
 
   private async onDisconnect(socket: SocketIO.Socket): Promise<void> {
     const providerConnection = this.connectedProviders.find((item) => item.socket.id === socket.id);
     this.connectedProviders = this.connectedProviders.filter((item) => item.socket.id !== socket.id);
+    this.apiManager.emitConnectedProvidersCount(this.getConnectedProvidersCount());
     if (providerConnection !== undefined) {
       try {
         const jobs = await this.database.findJobsByProviderId(providerConnection.provider._id);
