@@ -66,7 +66,8 @@ export default class Dispatcher {
       throw new Error('Invalid token');
     }
 
-    const ipInfo = await getIPInfo(socket.handshake.address);
+    const address = (socket.handshake.headers as { 'x-real-ip': string | undefined })['x-real-ip'] ?? socket.handshake.address;
+    const ipInfo = await getIPInfo(address);
 
     const providerConnection: ProviderConnection = {
       socket,
