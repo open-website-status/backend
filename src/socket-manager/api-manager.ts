@@ -116,7 +116,7 @@ export default class APIManager {
         try {
           const query = await this.getQuery(parsedData.queryId);
           if (parsedData.subscribe) {
-            socket.join(`query/${parsedData.queryId}`);
+            socket.join(`queries/${parsedData.queryId}`);
           }
           const jobs = await this.getJobs(parsedData.queryId);
           const jobListMessage: JobListMessage = {
