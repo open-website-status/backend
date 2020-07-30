@@ -7,12 +7,22 @@ export * from './jobs';
 
 export interface QueryMessage {
   id: string;
-  timestamp: Date;
+  timestamp: string;
   protocol: 'http:' | 'https:';
   hostname: string;
   port: number | undefined;
   pathname: string;
   search: string;
+}
+
+export const GetHostnameQueriesMessage = t.type({
+  hostname: t.string,
+  subscribe: t.boolean,
+});
+
+export interface HostnameQueriesMessage {
+  hostname: string;
+  queries: QueryMessage[];
 }
 
 export interface ProviderConnection {
@@ -100,6 +110,8 @@ export type DispatchAPIQueryFunction = (data: APIQueryMessage, id: ObjectId) => 
 export type DispatchWebsiteQueryFunction = (data: WebsiteQueryMessage, id: ObjectId) => Promise<QueryMessage>;
 
 export type GetQueryFunction = (queryId: string) => Promise<QueryMessage>;
+
+export type GetHostnameQueriesFunction = (hostname: string) => Promise<QueryMessage[]>;
 
 export type GetConnectedProvidersCountFunction = () => number;
 

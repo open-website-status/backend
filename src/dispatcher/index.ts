@@ -45,6 +45,7 @@ export default class Dispatcher {
       (queryId: string) => this.getQuery(queryId),
       (() => this.getConnectedProvidersCount()),
       ((queryId) => this.getJobs(queryId)),
+      ((hostname) => this.getHostnameQueries(hostname)),
     );
   }
 
@@ -92,6 +93,9 @@ export default class Dispatcher {
       try {
         const jobs = await this.database.findJobsByProviderId(providerConnection.provider._id);
         await Promise.all(jobs.map(async (job) => {
+          const query = await this.database.findQueryById(job.queryId);
+          if (query === null) throw new Error('Query assisted to job not found');
+
           if (job.jobState === 'accepted') {
             await this.modifyJob({
               _id: job._id,
@@ -104,8 +108,8 @@ export default class Dispatcher {
               countryCode: job.countryCode,
               regionCode: job.regionCode,
               ispName: job.ispName,
-            });
-            await this.sendJobList(job.queryId);
+            }, query.hostname);
+            await this.sendJobList(job.queryId, query.hostname);
           } else if (job.jobState === 'dispatched') {
             await this.modifyJob({
               _id: job._id,
@@ -117,8 +121,8 @@ export default class Dispatcher {
               countryCode: job.countryCode,
               regionCode: job.regionCode,
               ispName: job.ispName,
-            });
-            await this.sendJobList(job.queryId);
+            }, query.hostname);
+            await this.sendJobList(job.queryId, query.hostname);
           }
         }));
       } catch (error) {
@@ -151,6 +155,9 @@ export default class Dispatcher {
     const providerConnection = this.getProviderConnection(socket);
     const job = await this.getAndVerifyJob(providerConnection, jobId);
 
+    const query = await this.database.findQueryById(job.queryId);
+    if (query === null) throw new Error('Query assisted to job not found');
+
     await this.modifyJob({
       _id: job._id,
       queryId: job.queryId,
@@ -161,13 +168,16 @@ export default class Dispatcher {
       countryCode: job.countryCode,
       regionCode: job.regionCode,
       ispName: job.ispName,
-    });
-    await this.sendJobList(job.queryId);
+    }, query.hostname);
+    await this.sendJobList(job.queryId, query.hostname);
   }
 
   private async rejectJob(socket: SocketIO.Socket, jobId: string): Promise<void> {
     const providerConnection = this.getProviderConnection(socket);
     const job = await this.getAndVerifyJob(providerConnection, jobId);
+
+    const query = await this.database.findQueryById(job.queryId);
+    if (query === null) throw new Error('Query assisted to job not found');
 
     await this.modifyJob({
       _id: job._id,
@@ -179,8 +189,8 @@ export default class Dispatcher {
       countryCode: job.countryCode,
       regionCode: job.regionCode,
       ispName: job.ispName,
-    });
-    await this.sendJobList(job.queryId);
+    }, query.hostname);
+    await this.sendJobList(job.queryId, query.hostname);
   }
 
   private async cancelJob(socket: SocketIO.Socket, jobId: string): Promise<void> {
@@ -190,6 +200,9 @@ export default class Dispatcher {
     if (job.jobState !== 'accepted') {
       throw new Error('Job state is not accepted');
     }
+
+    const query = await this.database.findQueryById(job.queryId);
+    if (query === null) throw new Error('Query assisted to job not found');
 
     await this.modifyJob({
       _id: job._id,
@@ -202,8 +215,8 @@ export default class Dispatcher {
       countryCode: job.countryCode,
       regionCode: job.regionCode,
       ispName: job.ispName,
-    });
-    await this.sendJobList(job.queryId);
+    }, query.hostname);
+    await this.sendJobList(job.queryId, query.hostname);
   }
 
   private async completeJob(socket: SocketIO.Socket, jobId: string, result: JobResult): Promise<void> {
@@ -213,6 +226,9 @@ export default class Dispatcher {
     if (job.jobState !== 'accepted' && job.jobState !== 'canceled') {
       throw new Error('Job state is not accepted or canceled');
     }
+
+    const query = await this.database.findQueryById(job.queryId);
+    if (query === null) throw new Error('Query assisted to job not found');
 
     await this.modifyJob({
       _id: job._id,
@@ -226,8 +242,8 @@ export default class Dispatcher {
       countryCode: job.countryCode,
       regionCode: job.regionCode,
       ispName: job.ispName,
-    });
-    await this.sendJobList(job.queryId);
+    }, query.hostname);
+    await this.sendJobList(job.queryId, query.hostname);
   }
 
   // TODO: Implement throttling
@@ -288,20 +304,26 @@ export default class Dispatcher {
       };
     });
     await Promise.all(jobsWithConnections.map(async ({ job, connection }): Promise<void> => {
-      await this.createJob(job);
+      await this.createJob(job, query.hostname);
       ProviderManager.dispatchJob(connection.socket, query, job._id.toHexString());
     }));
-    this.apiManager.emitJobList(jobsWithConnections.map(({ job }) => job), query._id.toHexString());
-
-    return {
+    const queryMessage = {
       id: query._id.toHexString(),
       hostname: query.hostname,
       pathname: query.pathname,
       port: query.port,
       protocol: query.protocol,
-      timestamp: query.timestamp,
+      timestamp: query.timestamp.toISOString(),
       search: query.search,
     };
+    this.apiManager.emitQueryCreate(queryMessage);
+    this.apiManager.emitJobList(
+      jobsWithConnections.map(({ job }) => job),
+      query._id.toHexString(),
+      query.hostname,
+    );
+
+    return queryMessage;
   }
 
   private async getQuery(queryId: string): Promise<QueryMessage> {
@@ -309,7 +331,7 @@ export default class Dispatcher {
     if (query === null) throw new Error('Query not found');
     return {
       id: queryId,
-      timestamp: query.timestamp,
+      timestamp: query.timestamp.toISOString(),
       protocol: query.protocol,
       pathname: query.pathname,
       hostname: query.hostname,
@@ -318,23 +340,36 @@ export default class Dispatcher {
     };
   }
 
-  private async createJob(job: Job): Promise<void> {
+  private async getHostnameQueries(hostname: string): Promise<QueryMessage[]> {
+    const queries = await this.database.findQueriesByHostname(hostname);
+    return queries.map((query) => ({
+      id: query._id.toHexString(),
+      timestamp: query.timestamp.toISOString(),
+      protocol: query.protocol,
+      pathname: query.pathname,
+      hostname: query.hostname,
+      port: query.port,
+      search: query.search,
+    }));
+  }
+
+  private async createJob(job: Job, hostname: string): Promise<void> {
     await this.database.createJob(job);
-    this.apiManager.emitJobCreate(job);
+    this.apiManager.emitJobCreate(job, hostname);
   }
 
-  private async modifyJob(job: Job): Promise<void> {
+  private async modifyJob(job: Job, hostname: string): Promise<void> {
     await this.database.replaceJob(job);
-    this.apiManager.emitJobModify(job);
+    this.apiManager.emitJobModify(job, hostname);
   }
 
-  private async removeJob(jobId: string, queryId: string): Promise<void> {
+  private async removeJob(jobId: string, queryId: string, hostname: string): Promise<void> {
     await this.database.removeJob(Database.getObjectIdFromHexString(jobId));
-    this.apiManager.emitJobDelete(jobId, queryId);
+    this.apiManager.emitJobDelete(jobId, queryId, hostname);
   }
 
-  private async sendJobList(queryId: ObjectId): Promise<void> {
+  private async sendJobList(queryId: ObjectId, hostname: string): Promise<void> {
     const jobs = await this.database.findJobsByQueryId(queryId);
-    this.apiManager.emitJobList(jobs, queryId.toHexString());
+    this.apiManager.emitJobList(jobs, queryId.toHexString(), hostname);
   }
 }

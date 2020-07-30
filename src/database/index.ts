@@ -94,6 +94,13 @@ export default class Database {
     return this.db.collection('queries').findOne({ _id: id });
   }
 
+  public findQueriesByHostname(hostname: string): Promise<Query[]> {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection<Query>('queries').find({
+      hostname,
+    }).toArray();
+  }
+
   public async createQuery(query: Query): Promise<void> {
     if (!this.db) throw new Error('Database not connected');
     await this.db.collection('queries').insertOne(query);

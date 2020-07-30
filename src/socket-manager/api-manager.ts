@@ -4,15 +4,21 @@ import SocketIO from 'socket.io';
 import Database from '../database';
 import { Job } from '../database/types';
 import {
-  APIQueryMessage, BaseJobMessage,
+  APIQueryMessage,
+  BaseJobMessage,
   DispatchAPIQueryFunction,
   DispatchWebsiteQueryFunction,
   GetQueryFunction,
   GetQueryMessage,
   JobMessage,
-  JobDeleteMessage, JobListMessage,
+  JobDeleteMessage,
+  JobListMessage,
   QueryMessage,
-  WebsiteQueryMessage, ConnectedProvidersCountMessage, GetConnectedProvidersCountFunction, GetJobsFunction,
+  WebsiteQueryMessage,
+  ConnectedProvidersCountMessage,
+  GetConnectedProvidersCountFunction,
+  GetJobsFunction,
+  HostnameQueriesMessage, GetHostnameQueriesMessage, GetHostnameQueriesFunction,
 } from '../dispatcher/types';
 import { safeDataCallback } from '../utils/safe-socket-callback';
 import { AcknowledgementCallbackData, UnsafeCallback } from './types';
@@ -31,6 +37,8 @@ export default class APIManager {
 
   private readonly getJobs: GetJobsFunction;
 
+  private readonly getHostnameQueries: GetHostnameQueriesFunction;
+
   public constructor(
     socketManager: SocketManager,
     dispatchAPIQueryFunction: DispatchAPIQueryFunction,
@@ -38,12 +46,14 @@ export default class APIManager {
     getQueryFunction: GetQueryFunction,
     getConnectedProvidersCountFunction: GetConnectedProvidersCountFunction,
     getJobsFunction: GetJobsFunction,
+    getHostnameQueriesFunction: GetHostnameQueriesFunction,
   ) {
     this.dispatchAPIQuery = dispatchAPIQueryFunction;
     this.dispatchWebsiteQuery = dispatchWebsiteQueryFunction;
     this.getQuery = getQueryFunction;
     this.getConnectedProvidersCount = getConnectedProvidersCountFunction;
     this.getJobs = getJobsFunction;
+    this.getHostnameQueries = getHostnameQueriesFunction;
 
     this.socketServer = SocketIO(socketManager.httpServer, {
       path: '/api-socket',
@@ -63,6 +73,11 @@ export default class APIManager {
       socket.on(
         'get-query',
         (data, callback: AcknowledgementCallbackData<QueryMessage>) => this.onGetQuery(socket, data, callback),
+      );
+
+      socket.on(
+        'get-hostname-queries',
+        (data, callback: AcknowledgementCallbackData<HostnameQueriesMessage>) => this.onGetHostnameQueries(socket, data, callback),
       );
 
       socket.emit('connected-providers-count', {
@@ -133,6 +148,36 @@ export default class APIManager {
     ));
   }
 
+  private onGetHostnameQueries(socket: SocketIO.Socket, data: unknown, callback: UnsafeCallback<AcknowledgementCallbackData<HostnameQueriesMessage>>): void {
+    pipe(GetHostnameQueriesMessage.decode(data), fold(
+      () => safeDataCallback(callback, 'Request does not match schema', null),
+      async (parsedData): Promise<void> => {
+        try {
+          const queryMessages = await this.getHostnameQueries(parsedData.hostname);
+          if (parsedData.subscribe) {
+            socket.join(`hostnames/${parsedData.hostname}`);
+          }
+          await Promise.all(queryMessages.map(async (query) => {
+            const jobs = await this.getJobs(query.id);
+            const jobListMessage: JobListMessage = {
+              jobs: jobs.map((job) => APIManager.getJobMessage(job)),
+              queryId: query.id,
+            };
+            socket.emit('job-list', jobListMessage);
+          }));
+          const hostnameQueriesMessage: HostnameQueriesMessage = {
+            hostname: parsedData.hostname,
+            queries: queryMessages,
+          };
+          safeDataCallback(callback, null, hostnameQueriesMessage);
+        } catch (error) {
+          console.error(error);
+          safeDataCallback(callback, error instanceof Error ? error.message : 'Failed to get hostname queries', null);
+        }
+      },
+    ));
+  }
+
   private static getJobMessage(job: Job): JobMessage {
     const message: Omit<BaseJobMessage, 'jobState'> = {
       id: job._id.toHexString(),
@@ -180,33 +225,41 @@ export default class APIManager {
     };
   }
 
-  public emitJobCreate(job: Job): void {
+  public emitJobCreate(job: Job, hostname: string): void {
     const message = APIManager.getJobMessage(job);
     this.socketServer.in(`queries/${message.queryId}`).emit('job-create', message);
     this.socketServer.in(`jobs/${message.id}`).emit('job-create', message);
+    this.socketServer.in(`hostnames/${hostname}`).emit('job-create', message);
   }
 
-  public emitJobModify(job: Job): void {
+  public emitJobModify(job: Job, hostname: string): void {
     const message = APIManager.getJobMessage(job);
     this.socketServer.in(`queries/${message.queryId}`).emit('job-modify', message);
     this.socketServer.in(`jobs/${message.id}`).emit('job-modify', message);
+    this.socketServer.in(`hostnames/${hostname}`).emit('job-modify', message);
   }
 
-  public emitJobDelete(jobId: string, queryId: string): void {
+  public emitJobDelete(jobId: string, queryId: string, hostname: string): void {
     const message: JobDeleteMessage = {
       jobId,
       queryId,
     };
     this.socketServer.in(`queries/${queryId}`).emit('job-delete', message);
     this.socketServer.in(`jobs/${jobId}`).emit('job-delete', message);
+    this.socketServer.in(`hostnames/${hostname}`).emit('job-delete', message);
   }
 
-  public emitJobList(jobs: Job[], queryId: string): void {
+  public emitQueryCreate(message: QueryMessage): void {
+    this.socketServer.in(`hostnames/${message.hostname}`).emit('query-create', message);
+  }
+
+  public emitJobList(jobs: Job[], queryId: string, hostname: string): void {
     const message: JobListMessage = {
       jobs: jobs.map((job) => APIManager.getJobMessage(job)),
       queryId,
     };
     this.socketServer.in(`queries/${queryId}`).emit('job-list', message);
+    this.socketServer.in(`hostnames/${hostname}`).emit('job-list', message);
   }
 
   public emitConnectedProvidersCount(count: number): void {
