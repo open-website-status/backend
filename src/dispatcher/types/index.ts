@@ -10,7 +10,7 @@ export interface QueryMessage {
   timestamp: string;
   protocol: 'http:' | 'https:';
   hostname: string;
-  port: number | undefined;
+  port: number | null;
   pathname: string;
   search: string;
 }
@@ -37,7 +37,7 @@ export const APIQueryMessage = t.type({
   token: t.string,
   protocol: t.union([t.literal('http:'), t.literal('https:')]),
   hostname: t.string,
-  port: t.union([t.number, t.undefined]),
+  port: t.union([t.number, t.null]),
   pathname: t.string,
   search: t.string,
   subscribe: t.boolean,
@@ -48,7 +48,7 @@ export type APIQueryMessage = t.TypeOf<typeof APIQueryMessage>;
 export const WebsiteQueryMessage = t.type({
   protocol: t.union([t.literal('http:'), t.literal('https:')]),
   hostname: t.string,
-  port: t.union([t.number, t.undefined]),
+  port: t.union([t.number, t.null]),
   pathname: t.string,
   search: t.string,
   reCaptchaResponse: t.string,
@@ -69,7 +69,7 @@ export interface ProviderJobMessage {
   queryId: string,
   protocol: 'http:' | 'https:',
   hostname: string,
-  port: number | undefined,
+  port: number | null,
   pathname: string,
   search: string,
 }

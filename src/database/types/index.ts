@@ -24,7 +24,7 @@ export interface Query {
    * pathname: For example: "/doodles/", "/"
    */
   pathname: string;
-  port: number | undefined;
+  port: number | null;
   /**
    * search query: For example: "?v=dQw4w9WgXcQ", ""
    */
